@@ -72,7 +72,7 @@ class ProductResponse(BaseModel):
     category:str
 
     class Config:
-        orm_mode=True
+        from_attributes=True
 
 class CreateOrder(BaseModel):
     c_id:int
@@ -92,7 +92,7 @@ class OrderResponse(BaseModel):
     payment_status:str|None 
 
     class Config:
-        orm_mode=True
+        from_attributes=True
 
 class ProductManger(BaseModel):
     p_id:int
@@ -103,7 +103,7 @@ class ProductManger(BaseModel):
     quantity:int
 
     class Config:
-        orm_mode=True
+        from_attributes=True
 
 class ProductCategory(BaseModel):
     title:str
@@ -112,13 +112,13 @@ class ProductCategory(BaseModel):
     total_price:float
 
     class Config :
-        orm_mode=True
+        from_attributes=True
 
 class UpdateDelivery(BaseModel):
     is_delivered:bool
 
     class Config :
-        orm_mode=True
+        from_attributes=True
 
 
 Base.metadata.create_all(bind=engine)
