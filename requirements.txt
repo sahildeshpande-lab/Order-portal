@@ -6,5 +6,8 @@ pydantic
 email-validator
 passlib[bcrypt]
 python-multipart
+datetime
 starlette
+shutil 
 itsdangerous
+typing

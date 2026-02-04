@@ -39,7 +39,7 @@ def hash_password(password:str)->str :
         raise HTTPException(status_code=400,detail="Password to long ")
     return pwd.hash(password)
 
-def verify_password(plain_password:str,hashed_password:str) -> str :
+def verify_password(plain_password:str,hashed_password:str) -> bool :
     return pwd.verify(plain_password,hashed_password)
 
 def user_authentication(request:Request,db:Session=Depends(get_db))-> User:
@@ -62,7 +62,7 @@ def no_cache(response):
 
 @app.exception_handler(HTTPException)
 async def auth_exception_handler(request: Request, exc: HTTPException):
-    if exc.status_code == 401:
+    if exc.status_code == 401 and request.url.path != "/login":
         return RedirectResponse(url="/login", status_code=303)
     raise exc
 
