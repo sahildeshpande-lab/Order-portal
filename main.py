@@ -22,7 +22,8 @@ app.add_middleware(
     SessionMiddleware,
     secret_key=os.getenv("SESSION_SECRET", "dev-secret"),
     same_site="lax",
-    https_only=True
+    https_only=True,
+    session_cookie="session",
 )
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
