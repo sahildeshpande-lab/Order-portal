@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+    <title>Login page </title>
+ 
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;600&display=swap" rel="stylesheet">
+    <link href="{{ url_for('static', path='/style3.css') }}" rel="stylesheet">
+</head>
+<body>
+    <div class="background">
+        <div class="shape"></div>
+        <div class="shape"></div>
+    </div>
+    <form action="/login" method="post">
+        <h3>Admin Login</h3>
+
+        <label for="username">Username</label>
+        <input type="text" name="email"  placeholder="Enter the email"  id="username" required>
+        {% if error or message %}
+            <p style ="color:red;" >{{ error }}{{message}}</p>
+        {%endif%}
+
+        <label for="password">Password</label>
+        <input type="password"  name="password"  placeholder="Password" id="password" required>
+
+        <button type="submit" id="submitButton" class="submitButton" >Log In</button>
+        
+        <div style="display: flex;justify-content  : center; align-items: center;">
+        <a href="/forget-password" id="forget" class="forget">Forget password</a>
+        <button  type="link" id="submitButton" class="submitButton" style="margin-top: 15px;" > <a href="/register" style="text-decoration: none; color: rgb(18 48 5 / 99%);"> Register here</a></button>
+        
+        </div>
+    </form>
+</body>
+</html>

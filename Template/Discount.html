@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discount Page</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">    
+    <link href="{{ url_for('static', path='style.css') }}" rel="stylesheet">
+</head>
+<body>
+    <header class="app-header">
+        <h2>Update Product Discount</h2>
+        <button type="button" class="logout-btn"> <a href="/logout" style="text-decoration: none; color: wheat;">Logout </a></button>
+    </header>
+
+    <div class="form-wrapper">
+        <div class="form-card">
+            {% if message %}
+                <p class="message" style="color:red">{{ message }}</p>
+            {% endif %}
+            <form method="POST" action="/updatediscount">
+                <div class="mb-3">
+                    <button type="url" class="btn-back">
+                    <a href="/products" style="text-decoration: none; color: aliceblue;">
+                         ← Go back
+                   
+                    </a>
+                    </button>
+                </div>
+                <label for="product_id">Product Id</label>
+                <input name="product_id" id="product_id" type="number" class="form-control" placeholder="Enter Product ID" required>
+
+                <label for="discount">New Discount</label>
+                <input name="discount" id="discount" type="number" class="form-control" placeholder="Enter Discount (%)" required>
+
+                <button type="submit" class="btn-main">Submit</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

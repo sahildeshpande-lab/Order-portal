@@ -1,0 +1,368 @@
+* {
+    box-sizing: border-box;
+    font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+body {
+    margin: 0;
+    background: #f4f6fb;
+    color: #1f2937;
+}
+
+
+.app-header {
+    background: #1e1e2d;
+    color: #fff;
+    padding: 18px 30px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+}
+
+.app-header h2 {
+    margin: 0;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.logout-btn {
+    background: #dc3545;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.logout-btn:hover {
+    background: #bb2d3b;
+}
+
+
+.form-wrapper {
+    min-height: calc(100vh - 80px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 30px;
+}
+
+.form-card {
+    background: #ffffff;
+    width: 100%;
+    max-width: 480px;
+    padding: 30px;
+    border-radius: 16px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+}
+
+
+.message {
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.message.success {
+    background: #e6f9f0;
+    color: #067647;
+    border: 1px solid #34d399;
+}
+
+.message.error {
+    background: #fdecea;
+    color: #b42318;
+    border: 1px solid #f87171;
+}
+
+
+.btn-back {
+    background: #1e1e2d;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.btn-back:hover {
+    background: #2a2a3d;
+}
+
+
+form label {
+    display: block;
+    margin-top: 16px;
+    margin-bottom: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #374151;
+}
+
+form input[type="text"],
+form input[type="number"],
+form input[type="file"] {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid #d1d5db;
+    font-size: 14px;
+    transition: 0.3s;
+}
+
+form input:focus {
+    outline: none;
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+
+input[type="file"] {
+    padding: 8px;
+    background: #f9fafb;
+}
+
+
+.btn-main {
+    margin-top: 25px;
+    width: 100%;
+    padding: 12px;
+    border-radius: 12px;
+    border: none;
+    background: linear-gradient(135deg, #6366f1, #4f46e5);
+    color: white;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.3s ease;
+}
+
+.btn-main:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 25px rgba(79, 70, 229, 0.35);
+}
+
+
+@media (max-width: 576px) {
+    .form-card {
+        padding: 22px;
+    }
+
+    .app-header {
+        padding: 14px 20px;
+    }
+}
+
+/*  */
+.logout-btn {
+    background: #dc3545;
+    border: none;
+    color: #fff;
+    padding: 8px 18px;
+    border-radius: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.logout-btn:hover {
+    background: #bb2d3b;
+}
+
+.fancy {
+    background-color: wheat;
+    border: 2px solid #000;
+    border-radius: 0;
+    box-sizing: border-box;
+    color: #b8a7a7;
+    cursor: pointer;
+    display: inline-block;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    margin: 0;
+    outline: none;
+    overflow: visible;
+    padding: 1.25em 2em;
+    position: relative;
+    text-align: center;
+    text-decoration: none;
+    text-transform: none;
+    transition: all 0.3s ease-in-out;
+    user-select: none;
+    font-size: 13px;
+}
+
+.fancy::before {
+    content: " ";
+    width: 1.5625rem;
+    height: 2px;
+    background: black;
+    top: 50%;
+    left: 1.5em;
+    position: absolute;
+    transform: translateY(-50%);
+    transform-origin: center;
+    transition: background 0.3s linear, width 0.3s linear;
+}
+
+.fancy .text {
+    font-size: 1.125em;
+    line-height: 1.33333em;
+    padding-left: 2em;
+    display: block;
+    text-align: left;
+    transition: all 0.3s ease-in-out;
+    text-transform: uppercase;
+    text-decoration: none;
+    color: rgb(125, 120, 120);
+}
+
+.fancy .top-key {
+    height: 2px;
+    width: 1.5625rem;
+    top: -2px;
+    left: 0.625rem;
+    position: absolute;
+    background: #e8e8e8;
+    transition: width 0.5s ease-out, left 0.3s ease-out;
+}
+
+.fancy .bottom-key-1 {
+    height: 2px;
+    width: 1.5625rem;
+    right: 1.875rem;
+    bottom: -2px;
+    position: absolute;
+    background: #e8e8e8;
+    transition: width 0.5s ease-out, right 0.3s ease-out;
+}
+
+.fancy .bottom-key-2 {
+    height: 2px;
+    width: 0.625rem;
+    right: 0.625rem;
+    bottom: -2px;
+    position: absolute;
+    background: #e8e8e8;
+    transition: width 0.5s ease-out, right 0.3s ease-out;
+}
+
+.fancy:hover {
+    color: white;
+    background: black;
+}
+
+.fancy:hover::before {
+    width: 0.9375rem;
+    background: white;
+}
+
+.fancy:hover .text {
+    color: white;
+    padding-left: 1.5em;
+}
+
+.fancy:hover .top-key {
+    left: -2px;
+    width: 0px;
+}
+
+.fancy:hover .bottom-key-1,
+.fancy:hover .bottom-key-2 {
+    right: 0;
+    width: 0;
+}
+
+.order-form button {
+    background: #1e8e3e;
+    border: none;
+    border-radius: 12px;
+    padding: 12px;
+    font-weight: 600;
+    color: white;
+    width: 100%;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fancy-btn {
+    font-size: 1rem;
+    padding: 0.9em 2.2em;
+    background: linear-gradient(135deg, #000, #222);
+    border: 3px solid #ffd400;
+    border-radius: 1.2em;
+    color: #fff;
+    font-weight: bold;
+    transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    box-shadow: -6px 6px 0px #ffd400;
+}
+
+.fancy-btn:hover {
+    transform: translate(6px, -6px);
+}
+
+.card {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    border-radius: 12px;
+}
+
+
+.card-img-top {
+    height: 200px;
+    object-fit: cover;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+}
+
+
+.card-body {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+
+.card-body p {
+    display: flex;
+    overflow: hidden;
+    min-height: 40px;
+}
+
+
+.card-body .d-flex {
+    margin-top: auto;
+}
+
+
+.card-footer {
+    margin-top: auto;
+    padding: 12px;
+}
+
+
+.order-btn {
+    border-radius: 10px;
+    font-weight: 600;
+}
+
+
+.badge {
+    font-size: 12px;
+    padding: 6px 8px;
+    border-radius: 8px;
+}

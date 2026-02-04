@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Management</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+        rel="stylesheet">
+
+    <link href="{{ url_for('static', path='/style2.css') }}" rel="stylesheet">
+</head>
+
+<body>
+<div class="dashboard">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <ul class="menu">
+         <li>
+                <a href="/products/get-orders/{{user_id}}">
+                    Order Manager
+                </a>
+            </li>
+
+            
+            <li class="active">
+                <a href="#">Product Management</a>
+            </li>
+
+
+        
+            <li>
+                <a href="/products/get-orders/{{user_id}}/category">
+                    Category
+                </a>
+            </li>
+
+           
+        </ul>
+
+        <div class="sidebar-footer">
+            <button onclick="firstfunction()" class="btn btn-outline-light w-100 mb-2">
+                Go to Portal
+            </button>
+
+            <button onclick="window.location.href='/logout'" class="btn btn-danger w-100">
+                Logout
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="content">
+
+        <!-- Header -->
+        <header class="topbar">
+            <h4>Product History</h4>
+        </header>
+
+        {% if pro %}
+        <div class="card shadow-sm mt-4">
+            <div class="card-body">
+                <table class="table align-middle table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Product ID</th>
+                            <th>Title</th>
+                            <th>Price</th>
+                            <th>Quantity</th>
+                            <th>Discount (%)</th>
+                            <th>Total Price</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for p in pro %}
+                        <tr>
+                            <td>{{ p.p_id }}</td>
+                            <td class="fw-semibold">{{ p.title }}</td>
+                            <td>₹{{ p.price }}</td>
+                            <td>{{ p.quantity }}</td>
+                            <td>
+                                <span class="text-danger fw-bold">
+                                    {{ p.discount }}%
+                                </span>
+                            </td>
+                            <td class="fw-bold">
+                                ₹{{ p.total_price }}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <p>📦 No products found.</p>
+        </div>
+        {% endif %}
+
+    </main>
+</div>
+
+<script>
+    function firstfunction() {
+        window.location.replace("/products");
+    }
+</script>
+</body>
+</html>

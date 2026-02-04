@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+    <title>Register page  </title>
+ 
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;600&display=swap" rel="stylesheet">
+    <link href="{{ url_for('static', path='/style3.css') }}" rel="stylesheet">
+</head>
+<body>
+    <div class="background">
+        <div class="shape"></div>
+        <div class="shape"></div>
+    </div>
+    <form action="/register" method="post">
+        <h3>Register User </h3>
+        <label for="username">Username</label>
+        <input type="text" name="email"  placeholder="Enter the email"  id="username" required>
+        {% if error  %}
+            <p style="color: red;">
+                {{error}} 
+            </p>
+        {%endif%}
+
+
+        <label for="password">Password</label>
+        <input type="password"  name="password"  placeholder="Password" id="password" required>
+
+        <button type="submit" id="submitButton" class="submitButton">Submit</button>
+
+        <div style="display: flex;justify-content  : center; align-items: center;">
+        <p> Have account </p>
+        <button type="submit" id="registerButton" class="submitButton" style="color: rgb(18 48 5 / 99%); margin: 15px;"onclick="window.location.replace('/login') ">Login here </button>
+        
+        </div>
+    </form>
+</body>
+</html>
