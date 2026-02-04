@@ -48,7 +48,6 @@ def verify_password(plain_password:str,hashed_password:str) -> bool :
 def user_authentication(request:Request,db:Session=Depends(get_db))-> User:
     user_id = request.session.get("user_id")
     if not user_id :
-        # request.session["error"] = "Please login to continue"
         raise HTTPException(status_code=401)
     user = db.query(User).filter(User.id==user_id).first()
     if not user :
@@ -215,8 +214,8 @@ def update_password(request:Request,email:str=Form(...),password:str=Form(...),d
     db.commit()
     db.refresh(check_email)
 
-    request.session["success"]="Password updated successfully"
-    return RedirectResponse(url="/products",status_code=303)
+    request.session["success"]="Password updated successfully please login"
+    return RedirectResponse(url="/login",status_code=303)
 
 
 
