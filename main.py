@@ -10,7 +10,8 @@ import shutil
 from starlette.middleware.sessions import SessionMiddleware
 from passlib.context import CryptContext 
 import datetime
-from sqlalchemy import and_
+from sqlalchemy import func
+
 import os
 
 
@@ -18,13 +19,15 @@ import os
 app = FastAPI(
     title="Order portal")
 
+
 app.add_middleware(
     SessionMiddleware,
     secret_key=os.getenv("SESSION_SECRET", "dev-secret"),
     same_site="lax",
-    https_only=True,
+    https_only=False,
     session_cookie="session",
 )
+
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
@@ -442,8 +445,9 @@ def cancel_order(request:Request,o_id: int,current_user: User = Depends(user_aut
 
 @app.put("/updatedeliver/{productid}")
 def update_delivery(request: Request,productid: int,current_user: User = Depends(user_authentication),db: Session = Depends(get_db)):
-    order_update = (db.query(Order).filter(Order.p_id == productid,Order.c_id == current_user.id,Order.payment_status.in_(["cod", "paid"])).first())
+    order_update = (db.query(Order).filter(Order.p_id == productid,Order.c_id == current_user.id,func.lower(Order.payment_status).in_(["cod", "paid"])).first())
 
+    
     if not order_update:
         raise HTTPException(status_code=404, detail="Order not found or unpaid")
 
