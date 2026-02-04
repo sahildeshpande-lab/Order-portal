@@ -209,6 +209,10 @@ def update_password(request:Request,email:str=Form(...),password:str=Form(...),d
         error="New and old password is same either login or use different password"
         return templates.TemplateResponse("forget-password.html",{"request":request,"error":error})
     
+    if len(password)<5 :
+        error="The length of password should be greater than 5"
+        return templates.TemplateResponse("register.html",{"request":request,"error":error})
+    
 
     check_email.password=hash_password(password)
     db.commit()
@@ -243,7 +247,7 @@ def addproduct(
         return templates.TemplateResponse("addproduct.html",{"request":request,"message":message})
     
     if discount >= 90 or discount<10 :
-        message="Please select a valid discount range "
+        message="Please select a valid discount range [Valid range : {10-90}]"
         return templates.TemplateResponse("addproduct.html",{"request":request,"message":message})
     
 
@@ -508,7 +512,7 @@ def updatediscount(request:Request,product_id:int=Form(...), discount:int=Form(.
         return templates.TemplateResponse("Discount.html",{"request":request,"message":message })
 
     if discount >=80 or discount<10:
-        message="Please enter the valid range"
+        message="Invalid Discount range [Valid range : {10-80}]"
         return templates.TemplateResponse("Discount.html",{"request":request,"message":message })
     
     exisiting.discount=discount
