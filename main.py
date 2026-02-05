@@ -72,6 +72,16 @@ async def auth_exception_handler(request: Request, exc: HTTPException):
         return RedirectResponse(url="/login", status_code=303)
     raise exc
 
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from fastapi.responses import JSONResponse
+
+@app.exception_handler(StarletteHTTPException)
+async def not_found_handler(request: Request, exc: StarletteHTTPException):
+    if exc.status_code == 404:
+        return templates.TemplateResponse("404.html",{"request": request,"path": request.url.path},status_code=404)
+    return JSONResponse(status_code=exc.status_code,content={"detail": exc.detail},)
+
+
 
 @app.get("/")
 def products_home(request: Request, db: Session = Depends(get_db)):

@@ -1,34 +1,34 @@
 *,
-*::before,
-*::after {
-    margin: 0;
+*:before,
+*:after {
     padding: 0;
+    margin: 0;
     box-sizing: border-box;
-    font-family: "Poppins", system-ui, -apple-system, sans-serif;
+    font-family: 'Poppins', sans-serif;
 }
 
 body {
-    min-height: 100vh;
+    height: 100vh;
     background: linear-gradient(135deg, #0f172a, #1e293b);
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 20px;
-    overflow-x: hidden;
+    overflow: hidden;
 }
+
+
 .background {
     position: absolute;
     width: 430px;
     height: 520px;
-    z-index: 1;
 }
 
 .background .shape {
-    position: absolute;
-    width: 200px;
     height: 200px;
+    width: 200px;
+    position: absolute;
     border-radius: 50%;
-    filter: blur(12px);
+    filter: blur(10px);
 }
 
 .shape:first-child {
@@ -42,11 +42,11 @@ body {
     right: -60px;
     bottom: -80px;
 }
+
+
 form {
     position: relative;
-    z-index: 10;
     width: 400px;
-    max-width: 100%;
     padding: 40px 35px;
     background: rgba(255, 255, 255, 0.12);
     backdrop-filter: blur(15px);
@@ -54,13 +54,16 @@ form {
     border: 1px solid rgba(255, 255, 255, 0.2);
     box-shadow: 0 25px 45px rgba(0, 0, 0, 0.35);
     color: #ffffff;
+    z-index: 10;
 }
+
 form h3 {
     text-align: center;
     font-size: 26px;
     font-weight: 600;
-    margin-bottom: 28px;
+    margin-bottom: 30px;
 }
+
 
 label {
     display: block;
@@ -69,16 +72,17 @@ label {
     font-weight: 500;
 }
 
+
 input {
     width: 100%;
-    height: 46px;
+    height: 45px;
     margin-top: 8px;
-    padding: 0 14px;
+    padding: 0 12px;
     border-radius: 10px;
     border: none;
     outline: none;
     background: rgba(255, 255, 255, 0.2);
-    color: #ffffff;
+    color: #fff;
     font-size: 14px;
 }
 
@@ -87,8 +91,9 @@ input::placeholder {
 }
 
 input:focus {
-    background: rgba(255, 255, 255, 0.28);
+    background: rgba(255, 255, 255, 0.25);
 }
+
 
 form p {
     margin-top: 10px;
@@ -96,8 +101,9 @@ form p {
     text-align: center;
 }
 
-.submitButton {
-    margin-top: 26px;
+
+.btn , .submitButton {
+    margin-top: 28px;
     width: 100%;
     height: 48px;
     border-radius: 12px;
@@ -107,7 +113,7 @@ form p {
     color: #1f2937;
     font-weight: 600;
     font-size: 15px;
-    transition: all 0.25s ease;
+    transition: 0.3s ease;
 }
 
 .submitButton:hover {
@@ -115,9 +121,10 @@ form p {
     box-shadow: 0 12px 30px rgba(249, 115, 22, 0.45);
 }
 
+
 .forget {
     display: block;
-    margin-top: 16px;
+    margin-top: 20px;
     font-size: 13px;
     color: #fbbf24;
     text-decoration: none;
@@ -128,71 +135,24 @@ form p {
     text-decoration: underline;
 }
 
-.register-btn {
-    margin-top: 14px;
-    background: transparent;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    color: #ffffff;
+
+.submitButton a {
+    color: #1f2937;
+    font-weight: 600;
 }
 
-.register-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
-}
-
-.form-actions {
-    display: flex;
-    flex-direction: column;
+form div {
     gap: 12px;
-    margin-top: 10px;
 }
-@media (max-width: 768px) {
-    form {
-        width: 420px;
-        padding: 36px 30px;
-    }
 
-    form h3 {
-        font-size: 24px;
+
+@media (max-width: 480px) {
+    form {
+        width: 90%;
+        padding: 30px 25px;
     }
 
     .background {
         display: none;
-    }
-}
-@media (max-width: 480px) {
-    body {
-        padding: 15px;
-    }
-
-    form {
-        width: 100%;
-        max-width: 360px;
-        padding: 30px 25px;
-        border-radius: 16px;
-    }
-
-    input {
-        height: 44px;
-        font-size: 13px;
-    }
-
-    .submitButton {
-        height: 44px;
-        font-size: 14px;
-    }
-
-    .forget {
-        font-size: 12px;
-    }
-}
-
-@media (max-height: 600px) {
-    body {
-        align-items: flex-start;
-        padding-top: 30px;
-    }
-
-    form {
-        margin-bottom: 30px;
     }
 }
