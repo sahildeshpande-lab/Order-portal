@@ -4,10 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Product Management</title>
-
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
-        rel="stylesheet">
-
     <link href="{{ url_for('static', path='/style2.css') }}" rel="stylesheet">
 </head>
 
@@ -38,13 +34,11 @@
         </ul>
 
         <div class="sidebar-footer">
-            <button onclick="firstfunction()" class="btn btn-outline-light w-100 mb-2">
+            <button onclick="firstfunction()">
                 Go to Portal
             </button>
 
-            <button onclick="window.location.href='/logout'" class="btn btn-danger w-100">
-                Logout
-            </button>
+            <a href="/logout"><button>Logout</button></a>
         </div>
     </aside>
     <main class="content">
@@ -54,10 +48,10 @@
         </header>
 
         {% if pro %}
-        <div class="card shadow-sm mt-4">
-            <div class="card-body">
-                <table class="table align-middle table-hover">
-                    <thead class="table-light">
+        <div>
+            <div class="card">
+                <table>
+                    <thead>
                         <tr>
                             <th>Product ID</th>
                             <th>Title</th>
@@ -71,15 +65,14 @@
                     {% for p in pro %}
                         <tr>
                             <td>{{ p.p_id }}</td>
-                            <td class="fw-semibold">{{ p.title }}</td>
+                            <td>{{ p.title }}</td>
                             <td>₹{{ p.price }}</td>
                             <td>{{ p.quantity }}</td>
-                            <td>
-                                <span class="text-danger fw-bold">
-                                    {{ p.discount }}%
-                                </span>
-                            </td>
-                            <td class="fw-bold">
+                            <td class="discount-value">
+    {{ p.discount }}%
+</td>
+
+                            <td class="total-price">
                                 ₹{{ p.total_price }}
                             </td>
                         </tr>
@@ -89,7 +82,7 @@
             </div>
         </div>
         {% else %}
-        <div class="empty-state">
+        <div>
             <p>📦 No products found.</p>
         </div>
         {% endif %}

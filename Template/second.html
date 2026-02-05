@@ -5,120 +5,108 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Order Manager</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="{{ url_for('static', path='/style2.css') }}" rel="stylesheet">
 </head>
 
 <body>
-    <div class="dashboard">
+<div class="dashboard">
 
-        <aside class="sidebar">
+    <aside class="sidebar">
+        <ul class="menu">
+            <li class="active"><a href="#">Order Manager</a></li>
+            <li><a href="/products/get-orders/{{user_id}}/productmanager">Product Management</a></li>
+            <li><a href="/products/get-orders/{{user_id}}/category">Category</a></li>
+        </ul>
 
-            <ul class="menu">
-                <li class="active">
-                    <a href="#">Order Manager</a>
-                </li>
+        <div class="sidebar-footer">
+            <button onclick="firstfunction()">Go to Portal</button>
+            <a href="/logout"><button>Logout</button></a>
+        </div>
+    </aside>
+
+    <main class="content">
+        <header class="topbar">
+            <h4>Order History</h4>
+        </header>
+
+        {% if response %}
+        <div class="card">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Product ID</th>
+                        <th>Title</th>
+                        <th>Description</th>
+                        <th>Qty</th>
+                        <th>Total</th>
+                        <th>Payment</th>
+                        <th>Is Delivered</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                {% for res in response %}
+                    <tr>
+                        <td>{{ res.p_id }}</td>
+                        <td>{{ res.title }}</td>
+                        <td>{{ res.description }}</td>
+                        <td>{{ res.quantity }}</td>
+                        <td class="total-price">₹{{ res.total_price }}</td>
+
+                        <td class="payment-cell">
+                            {% if res.payment_status is none %}
+                                <form action="/checkout/start" method="post">
+                                    <button type="submit" class="pay-btn">💳 Pay Now</button>
+                                </form>
+
+                                <form action="/orders/cancel/{{ res.o_id }}" method="post">
+                                    <button type="submit" class="cancel-btn">❌ Cancel</button>
+                                </form>
+                            {% else %}
+                                <span class="status-badge">
+                                    {{ res.payment_status | upper }}
+                                </span>
+                            {% endif %}
+                        </td>
+
+                        <td>
+    <button
+        class="delivery-status {{ 'delivered' if res.is_delivered else 'pending' }}"
+        onclick="updateDelivery(this, '{{ res.p_id }}')">
+        {{ 'Delivered' if res.is_delivered else 'Pending' }}
+    </button>
+</td>
+
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% else %}
+        <div class="empty-state">
+            <p>🛒 You haven’t placed any orders yet.</p>
+        </div>
+        {% endif %}
+    </main>
+</div>
+
+<script>
+function firstfunction() {
+    window.location.replace("/products");
+}
+
+function updateDelivery(btn, productId) {
+    fetch(`/updatedeliver/${productId}`, { method: 'PUT' })
+        .then(() => {
+            btn.classList.toggle('delivered');
+            btn.classList.toggle('pending');
+            btn.textContent =
+                btn.classList.contains('delivered') ? 'Delivered' : 'Pending';
+        });
+}
 
 
-                <li>
-                    <a href="/products/get-orders/{{user_id}}/productmanager">
-                        Product Management
-                    </a>
-                </li>
-                <li>
-                    <a href="/products/get-orders/{{user_id}}/category">
-                        Category
-                    </a>
-                </li>
-            </ul>
-
-            <div class="sidebar-footer">
-                <button onclick="firstfunction()" class="btn btn-outline-light w-100 mb-2">
-                    Go to Portal
-                </button>
-
-                <a href="/logout">
-                    <button class="btn btn-danger w-100">Logout</button>
-                </a>
-            </div>
-        </aside>
-
-        <main class="content">
-            <header class="topbar">
-                <h4>Order History</h4>
-            </header>
-
-            {% if response %}
-            <div class="card shadow-sm mt-4">
-                <div class="card-body">
-                    <table class="table align-middle table-hover">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Product ID</th>
-                                <th>Title</th>
-                                <th>Description</th>
-                                <th>Qty</th>
-                                <th>Total</th>
-                                <th>Payment</th>
-                                <th>Is_delivered</th>
-
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for res in response %}
-                            <tr>
-                                <td>{{ res.p_id }}</td>
-                                <td class="fw-semibold">{{ res.title }}</td>
-                                <td class="text-muted small">{{ res.description }}</td>
-                                <td>{{ res.quantity }}</td>
-                                <td class="fw-bold">₹{{ res.total_price }}</td>
-                                <td>
-                                    {% if res.payment_status is none %}
-                                    <form action="/checkout/start" method="post" style="display:inline;">
-                                        <button type="submit" class="btn btn-sm btn-success">
-                                            💳 Pay Now
-                                        </button>
-                                    </form>
-
-                                    <form action="/orders/cancel/{{ res.o_id }}" method="post" style="display:inline;">
-                                        <button type="submit" class="btn btn-sm btn-danger">
-                                            ❌ Cancel
-                                        </button>
-                                    </form>
-                                    {% else %}
-                                    <span class="badge bg-secondary">
-                                        {{ res.payment_status | upper }}
-                                    </span>
-                                    {% endif %}
-                                </td>
-
-                                <td>
-                                    <button class="btn btn-sm btn-info confirmation"
-                                        onclick="fetch('/updatedeliver/{{ res.p_id }}', { method: 'PUT' })">
-                                        {{ res.is_delivered }}
-                                    </button>
-                                </td>
-
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            {% else %}
-            <div class="empty-state">
-                <p>🛒 You haven’t placed any orders yet.</p>
-            </div>
-            {% endif %}
-
-        </main>
-    </div>
-
-    <script>
-        function firstfunction() {
-            window.location.replace("/products");
-        }
-    </script>
+</script>
 </body>
-
 </html>
