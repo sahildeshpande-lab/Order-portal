@@ -1,40 +1,48 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Register page  </title>
- 
+    <title>Register</title>
+
     <link rel="preconnect" href="https://fonts.gstatic.com">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;600&display=swap" rel="stylesheet">
     <link href="{{ url_for('static', path='/style3.css') }}" rel="stylesheet">
 </head>
+
 <body>
-    <div class="background">
-        <div class="shape"></div>
-        <div class="shape"></div>
-    </div>
-    <form action="/register" method="post">
-        <h3>Register User </h3>
-        <label for="username">Username</label>
-        <input type="text" name="email"  placeholder="Enter the email"  id="username" required>
-        {% if error  %}
-            <p style="color: red;">
-                {{error}} 
-            </p>
-        {%endif%}
 
+<div class="background">
+    <div class="shape"></div>
+    <div class="shape"></div>
+</div>
 
-        <label for="password">Password</label>
-        <input type="password"  name="password"  placeholder="Password" id="password" required>
+<form action="/register" method="post">
+    <h3>Register User</h3>
 
-        <button type="submit" id="submitButton" class="submitButton">Submit</button>
+    <label for="email">Email</label>
+    <input type="email" name="email" id="email" placeholder="Enter your email" required>
 
-        <div style="display: flex;justify-content  : center; align-items: center;">
-        <p> Have account </p>
-        <button type="submit" id="registerButton" class="submitButton" style="color: rgb(18 48 5 / 99%); margin: 15px;"onclick="window.location.replace('/login') ">Login here </button>
-        
-        </div>
-    </form>
+    {% if error %}
+        <p class="error">{{ error }}</p>
+    {% endif %}
+
+    <label for="password">Password</label>
+    <input type="password" name="password" id="password" placeholder="Create a password" required>
+
+    <button type="submit" class="submitButton">
+        Create Account
+    </button>
+
+    <p style="margin-top: 16px; text-align: center; font-size: 13px;">
+        Already have an account?
+    </p>
+
+    <a href="/login" class="submitButton secondary">
+        Login here
+    </a>
+</form>
+
 </body>
 </html>
