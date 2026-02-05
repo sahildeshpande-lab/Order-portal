@@ -1,99 +1,102 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Product Management</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;600&display=swap" rel="stylesheet">
     <link href="{{ url_for('static', path='/style2.css') }}" rel="stylesheet">
 </head>
 
 <body>
-<div class="dashboard">
-    <aside class="sidebar">
-        <ul class="menu">
-         <li>
-                <a href="/products/get-orders/{{user_id}}">
-                    Order Manager
-                </a>
-            </li>
-
-            
-            <li class="active">
-                <a href="#">Product Management</a>
-            </li>
+    <div class="dashboard">
+        <aside class="sidebar">
+            <ul class="menu">
+                <li>
+                    <a href="/products/get-orders/{{user_id}}">
+                        Order Manager
+                    </a>
+                </li>
 
 
-        
-            <li>
-                <a href="/products/get-orders/{{user_id}}/category">
-                    Category
-                </a>
-            </li>
+                <li class="active">
+                    <a href="#">Product Management</a>
+                </li>
 
-           
-        </ul>
 
-        <div class="sidebar-footer">
-            <button onclick="firstfunction()">
-                Go to Portal
-            </button>
 
-            <a href="/logout"><button>Logout</button></a>
-        </div>
-    </aside>
-    <main class="content">
+                <li>
+                    <a href="/products/get-orders/{{user_id}}/category">
+                        Category
+                    </a>
+                </li>
 
-        <header class="topbar">
-            <h4>Product History</h4>
-        </header>
 
-        {% if pro %}
-        <div>
-            <div class="card">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Product ID</th>
-                            <th>Title</th>
-                            <th>Price</th>
-                            <th>Quantity</th>
-                            <th>Discount (%)</th>
-                            <th>Total Price</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    {% for p in pro %}
-                        <tr>
-                            <td>{{ p.p_id }}</td>
-                            <td>{{ p.title }}</td>
-                            <td>₹{{ p.price }}</td>
-                            <td>{{ p.quantity }}</td>
-                            <td class="discount-value">
-    {{ p.discount }}%
-</td>
+            </ul>
 
-                            <td class="total-price">
-                                ₹{{ p.total_price }}
-                            </td>
-                        </tr>
-                    {% endfor %}
-                    </tbody>
-                </table>
+            <div class="sidebar-footer">
+                <button onclick="firstfunction()">
+                    Go to Portal
+                </button>
+
+                <a href="/logout"><button>Logout</button></a>
             </div>
-        </div>
-        {% else %}
-        <div>
-            <p>📦 No products found.</p>
-        </div>
-        {% endif %}
+        </aside>
+        <main class="content">
 
-    </main>
-</div>
+            <header class="topbar">
+                <h4>Product History</h4>
+            </header>
 
-<script>
-    function firstfunction() {
-        window.location.replace("/products");
-    }
-</script>
+            {% if pro %}
+            <div>
+                <div class="card">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Product ID</th>
+                                <th>Title</th>
+                                <th>Price</th>
+                                <th>Quantity</th>
+                                <th>Discount (%)</th>
+                                <th>Total Price</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in pro %}
+                            <tr>
+                                <td>{{ p.p_id }}</td>
+                                <td>{{ p.title }}</td>
+                                <td>₹{{ p.price }}</td>
+                                <td>{{ p.quantity }}</td>
+                                <td class="discount-value">
+                                    {{ p.discount }}%
+                                </td>
+
+                                <td class="total-price">
+                                    ₹{{ p.total_price }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% else %}
+            <div>
+                <p>📦 No products found.</p>
+            </div>
+            {% endif %}
+
+        </main>
+    </div>
+
+    <script>
+        function firstfunction() {
+            window.location.replace("/products");
+        }
+    </script>
 </body>
+
 </html>
