@@ -366,3 +366,94 @@ input[type="file"] {
     padding: 6px 8px;
     border-radius: 8px;
 }
+
+@media (max-width: 576px) {
+
+    body {
+        font-size: 14px;
+    }
+
+    /* Header */
+    .app-header {
+        flex-direction: column;
+        gap: 10px;
+        text-align: center;
+    }
+
+    .logout-btn {
+        width: 100%;
+    }
+
+    .form-wrapper {
+        padding: 15px;
+    }
+
+    .form-card {
+        padding: 20px;
+        border-radius: 14px;
+    }
+
+    form label {
+        font-size: 13px;
+    }
+
+    form input {
+        font-size: 13px;
+        padding: 9px 10px;
+    }
+
+    .btn-main {
+        font-size: 14px;
+        padding: 11px;
+    }
+
+    .fancy,
+    .fancy-btn {
+        width: 100%;
+        text-align: center;
+    }
+
+    .fancy .text {
+        padding-left: 0;
+        text-align: center;
+    }
+
+    .fancy::before {
+        display: none;
+    }
+    .card-img-top {
+        height: 160px;
+    }
+}
+
+@media (max-width: 768px) {
+
+    .app-header {
+        padding: 14px 20px;
+    }
+
+    .form-card {
+        max-width: 100%;
+    }
+
+    .card-img-top {
+        height: 180px;
+    }
+
+    .fancy-btn {
+        font-size: 0.95rem;
+        padding: 0.8em 2em;
+    }
+}
+
+
+@media (max-width: 992px) {
+
+    .form-wrapper {
+        padding: 20px;
+    }
+
+    .card {
+        border-radius: 10px;
+    }
+}

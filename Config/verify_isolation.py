@@ -17,7 +17,6 @@ def verify_isolation():
     checks_passed = 0
     checks_total = 0
     
-    # Check 1: tests directory exists
     checks_total += 1
     print("\n✓ Check 1: Verifying tests directory...")
     if os.path.exists("tests") and os.path.isdir("tests"):
@@ -26,7 +25,6 @@ def verify_isolation():
     else:
         print("  ❌ FAIL: tests/ directory not found")
     
-    # Check 2: conftest.py uses test_suite.db
     checks_total += 1
     print("\n✓ Check 2: Verifying test database name...")
     try:
@@ -40,7 +38,6 @@ def verify_isolation():
     except FileNotFoundError:
         print("  ⚠️  WARNING: tests/conftest.py not found")
     
-    # Check 3: test_uploads directory is used
     checks_total += 1
     print("\n✓ Check 3: Verifying uploads directory...")
     try:
@@ -54,7 +51,6 @@ def verify_isolation():
     except FileNotFoundError:
         print("  ⚠️  WARNING: tests/conftest.py not found")
     
-    # Check 4: No test.db in current directory will be modified
     checks_total += 1
     print("\n✓ Check 4: Checking for existing test.db...")
     if os.path.exists("test.db"):
@@ -67,7 +63,6 @@ def verify_isolation():
         print("  ✅ PASS: No risk of modifying non-existent file")
         checks_passed += 1
     
-    # Check 5: Cleanup is configured
     checks_total += 1
     print("\n✓ Check 5: Verifying cleanup configuration...")
     try:
@@ -81,7 +76,6 @@ def verify_isolation():
     except FileNotFoundError:
         print("  ⚠️  WARNING: tests/conftest.py not found")
     
-    # Check 6: pytest.ini exists
     checks_total += 1
     print("\n✓ Check 6: Checking for pytest.ini...")
     if os.path.exists("pytest.ini"):
@@ -89,8 +83,7 @@ def verify_isolation():
         checks_passed += 1
     else:
         print("  ⚠️  WARNING: pytest.ini not found")
-    
-    # Summary
+   
     print("\n" + "="*70)
     print("VERIFICATION SUMMARY")
     print("="*70)

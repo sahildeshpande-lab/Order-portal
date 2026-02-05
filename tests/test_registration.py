@@ -52,7 +52,6 @@ class TestOrders:
             "product_id": test_product.p_id,
             "quantity": 1
         }, follow_redirects=False)
-        # Duplicate order redirects with error in session
         assert response.status_code == 303
 
     def test_view_orders(self, authenticated_client, test_user):
@@ -81,8 +80,6 @@ class TestOrders:
             Order.p_id == test_product.p_id
         ).first()
         
-        # Price = 100, Discount = 20%, Quantity = 2
-        # Expected = 2 * (100 - 20) = 160
         expected_price = 2 * (test_product.price - (test_product.price * test_product.discount / 100))
         assert order.total_price == expected_price
 

@@ -66,7 +66,6 @@ class TestOrderCancellation:
         )
         assert response.status_code == 303
         
-        # Verify order still exists
         check_order = db_session.query(Order).filter(Order.o_id == order.o_id).first()
         assert check_order is not None
 

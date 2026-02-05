@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Comprehensive Test Runner for Order Portal API
 Runs all tests with coverage reporting
@@ -103,16 +102,12 @@ def main():
     """Main test runner"""
     print_header("Order Portal API - Test Suite Runner")
     
-    # Clean old artifacts
     clean_artifacts()
-    
-    # Small delay to ensure files are released
+
     time.sleep(1)
     
-    # Run tests
     exit_code = run_tests()
     
-    # Print summary
     print_summary()
     
     if exit_code == 0:
@@ -121,8 +116,7 @@ def main():
         print("\n⚠️  Some tests failed. Check the reports for details.")
     
     print("\n" + "="*70 + "\n")
-    
-    # Don't exit with error code to allow viewing reports
+
     sys.exit(0)
 
 

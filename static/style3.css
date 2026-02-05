@@ -156,3 +156,84 @@ form div {
         display: none;
     }
 }
+
+@media (max-width: 360px) {
+
+    form {
+        width: 92%;
+        padding: 24px 20px;
+        border-radius: 14px;
+    }
+
+    form h3 {
+        font-size: 22px;
+        margin-bottom: 22px;
+    }
+
+    label {
+        font-size: 13px;
+    }
+
+    input {
+        height: 42px;
+        font-size: 13px;
+    }
+
+    .btn,
+    .submitButton {
+        height: 44px;
+        font-size: 14px;
+    }
+}
+
+@media (max-width: 480px) {
+
+    body {
+        padding: 15px;
+    }
+
+    form {
+        width: 100%;
+        max-width: 360px;
+    }
+
+    form p {
+        font-size: 12px;
+    }
+
+    .forget {
+        font-size: 12px;
+    }
+
+    .background {
+        display: none;
+    }
+}
+@media (max-width: 768px) {
+
+    body {
+        justify-content: center;
+        padding: 20px;
+    }
+
+    form {
+        width: 420px;
+        padding: 36px 30px;
+    }
+
+    form h3 {
+        font-size: 24px;
+    }
+}
+
+@media (max-height: 600px) {
+
+    body {
+        align-items: flex-start;
+        padding-top: 30px;
+    }
+
+    form {
+        margin-bottom: 30px;
+    }
+}
