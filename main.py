@@ -10,6 +10,7 @@ import shutil
 from starlette.middleware.sessions import SessionMiddleware
 from passlib.context import CryptContext 
 import datetime
+import uuid
 from sqlalchemy import func
 
 import os
@@ -232,52 +233,77 @@ def addproducts_page(request:Request,current_user:User = Depends(user_authentica
     response= templates.TemplateResponse("addproduct.html",{"request":request,"m":m,"user_id":current_user.id})
     return no_cache(response)
 
-@app.post("/add-product",tags=["Add product endpoint"])
+@app.post("/add-product", tags=["Add product endpoint"])
 def addproduct(
-    request:Request,
-    title:Optional[str] =Form(None),
-    description:Optional[str]=Form(None),
-    price:Optional[float]=Form(None),
-    discount:Optional[float]=Form(None),
-    image:Optional[UploadFile]=File(None),
-    category:Optional[str]=Form(None),
-    current_user:User=Depends(user_authentication),
-    db:Session=Depends(get_db)
+    request: Request,
+    title: Optional[str] = Form(None),
+    description: Optional[str] = Form(None),
+    price: Optional[float] = Form(None),
+    discount: Optional[float] = Form(None),
+    image: Optional[UploadFile] = File(None),
+    category: Optional[str] = Form(None),
+    current_user: Optional[User] = Depends(user_authentication),
+    db: Session = Depends(get_db)
 ):
-    
-    if not title or not description or price is None or discount is None or image is None or category is None:
-        message="All fields are required"
-        return templates.TemplateResponse("addproduct.html",{"request":request,"message":message})
-    
-    if discount >= 90 or discount<10 :
-        message="Please select a valid discount range [Valid range : {10-90}]"
-        return templates.TemplateResponse("addproduct.html",{"request":request,"message":message})
-    
+    if not current_user:
+        return RedirectResponse("/login", status_code=303)
 
-    existing = db.query(Products).filter(Products.title.ilike(title.strip())).first()
-    if existing :
-        message="Product with this name already exist , please use different Name"
-        return templates.TemplateResponse("addproduct.html",{"request":request,"message":message})
+    if not all([title, description, category, image]) or price is None or discount is None:
+        message = "All fields are required"
+        return templates.TemplateResponse(
+            "addproduct.html",
+            {"request": request, "message": message}
+        )
 
-    image_path=f"uploads/{image.filename}"
-    with open(image_path,"wb") as buffer :
-        shutil.copyfileobj(image.file,buffer)
-        
+    if discount < 10 or discount > 90:
+        message = "Please select a valid discount range (10–90)"
+        return templates.TemplateResponse(
+            "addproduct.html",
+            {"request": request, "message": message}
+        )
 
+    existing = (
+        db.query(Products)
+        .filter(func.lower(Products.title) == title.strip().lower())
+        .first()
+    )
 
-    new_product =Products(title=title, description=description,price=price,discount=discount,image=image_path,category=category)
-    message="Product is added successfully "
+    if existing:
+        message = "Product with this name already exists"
+        return templates.TemplateResponse(
+            "addproduct.html",
+            {"request": request, "message": message}
+        )
+
+    UPLOAD_DIR = "uploads"
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+    file_ext = os.path.splitext(image.filename)[1]
+    unique_filename = f"{uuid.uuid4()}{file_ext}"
+    image_path = os.path.join(UPLOAD_DIR, unique_filename)
+
+    with open(image_path, "wb") as buffer:
+        shutil.copyfileobj(image.file, buffer)
+
+    new_product = Products(
+        title=title.strip(),
+        description=description.strip(),
+        price=price,
+        discount=discount,
+        image=image_path,
+        category=category.strip()
+    )
+
     db.add(new_product)
     db.commit()
     db.refresh(new_product)
 
     products = db.query(Products).all()
+    message = "Product added successfully"
+
     return templates.TemplateResponse(
-    "products.html",
-    {"request": request, "products": products, "message": message}
-)
-
-
+        "products.html",
+        {"request": request, "products": products, "message": message})
 
 @app.post("/order",tags=["Order product endpoint"])
 def create_order(request:Request,product_id : int =Form(...),quantity:int = Form(...),current_user: User = Depends(user_authentication),db:Session=Depends(get_db)):

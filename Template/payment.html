@@ -8,9 +8,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
 
     <style>
-        body {
-            background-color: #f3f3f3;
-        }
+        body { background-color: #f3f3f3; }
 
         .payment-card {
             background: #fff;
@@ -55,108 +53,113 @@
             border: none;
         }
 
-        .pay-btn:hover {
-            background: #4b3fe0;
-        }
+        .pay-btn:hover { background: #4b3fe0; }
 
-        #card-section {
-            display: none;
-        }
+        #card-section { display: none; }
     </style>
 </head>
 
 <body>
 
 <div class="container mt-5" style="max-width: 800px;">
-    <form method="post" action="/payment">
-        <div class="payment-card">
-            <div class="section-title">BILLING ADDRESS</div>
+<form method="post" action="/payment">
 
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="inputbox">
-                        <input type="text" name="street" placeholder="Enter your street address" required>
-                        <span>Street Address</span>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="inputbox">
-                        <input type="text" name="city" placeholder="Enter your city" required>
-                        <span>City</span>
-                    </div>
-                </div>
+<div class="payment-card">
+
+    <div class="section-title">BILLING ADDRESS</div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="inputbox">
+                <input type="text" name="street" required>
+                <span>Street Address</span>
             </div>
-
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="inputbox">
-                        <input type="text" name="state" placeholder="Enter your state" required>
-                        <span>State / Province</span>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="inputbox">
-                        <input type="number" name="zip" pattern="\d{6}" placeholder="Pincode" required >
-                        <span>Zip code</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="section-title mt-4">PAYMENT METHOD</div>
-
-            <div class="mb-3">
-                <input type="radio" name="method" value="COD" checked onclick="toggleCard(false)">
-                <label class="ms-2">Cash on Delivery</label>
-            </div>
-
-            <div class="mb-3">
-                <input type="radio" name="method" value="CARD" onclick="toggleCard(true)">
-                <label class="ms-2">Card</label>
-            </div>
-            <div id="card-section">
-                <div class="section-title mt-4">CARD DETAILS</div>
-
-                <div class="inputbox">
-                    <input type="text" name="card_name" placeholder="Card holder Name"required>
-                    <span>Name on card</span>
-                </div>
-
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="inputbox">
-                            <input type="number" name="card_number" pattern="\d{12}" placeholder="123412123182" required>
-                            <span>Card Number</span>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="inputbox">
-                            <input type="date" name="expiry">
-                            <span>Expiry</span>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="inputbox">
-                            <input type="password" name="cvv" placeholder="000" pattern="\d{3}">
-                            <span>CVV</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="d-flex justify-content-between align-items-center mt-4">
-                <button type="submit" class="pay-btn">Pay ₹{{ total_amount }}</button>
-            </div>
-
         </div>
-    </form>
+        <div class="col-md-6">
+            <div class="inputbox">
+                <input type="text" name="city" required>
+                <span>City</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="inputbox">
+                <input type="text" name="state" required>
+                <span>State / Province</span>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="inputbox">
+                <input type="text" name="zip" pattern="\d{6}" required>
+                <span>Zip / Pincode (6 digits)</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="section-title mt-4">PAYMENT METHOD</div>
+
+    <div class="mb-3">
+        <input type="radio" name="method" value="COD" checked onclick="toggleCard(false)">
+        <label class="ms-2">Cash on Delivery</label>
+    </div>
+
+    <div class="mb-3">
+        <input type="radio" name="method" value="CARD" onclick="toggleCard(true)">
+        <label class="ms-2">Card</label>
+    </div>
+
+    <div id="card-section">
+        <div class="section-title mt-4">CARD DETAILS</div>
+
+        <div class="inputbox">
+            <input type="text" name="card_name">
+            <span>Name on card</span>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="inputbox">
+                    <input type="text" name="card_number" pattern="\d{12}">
+                    <span>Card Number (12 digits)</span>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="inputbox">
+                    <input type="month" name="expiry">
+                    <span>Expiry</span>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="inputbox">
+                    <input type="password" name="cvv" pattern="\d{3}">
+                    <span>CVV</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-4">
+        <button type="submit" class="pay-btn">Pay ₹{{ total_amount }}</button>
+    </div>
+
+</div>
+</form>
 </div>
 
 <script>
-    function toggleCard(show) {
-        document.getElementById("card-section").style.display = show ? "block" : "none";
-    }
+function toggleCard(show) {
+    const section = document.getElementById("card-section");
+    section.style.display = show ? "block" : "none";
+
+    section.querySelectorAll("input").forEach(i => {
+        i.required = show;
+    });
+}
 </script>
 
 </body>
 </html>
-
