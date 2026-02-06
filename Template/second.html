@@ -10,52 +10,52 @@
 </head>
 
 <body>
-<div class="dashboard">
+    <div class="dashboard">
 
-    <aside class="sidebar">
-        <ul class="menu">
-            <li class="active"><a href="#">Order Manager</a></li>
-            <li><a href="/products/get-orders/{{user_id}}/productmanager">Product Management</a></li>
-            <li><a href="/products/get-orders/{{user_id}}/category">Category</a></li>
-        </ul>
+        <aside class="sidebar">
+            <ul class="menu">
+                <li class="active"><a href="#">Order Manager</a></li>
+                <li><a href="/products/get-orders/{{user_id}}/productmanager">Product Management</a></li>
+                <li><a href="/products/get-orders/{{user_id}}/category">Category</a></li>
+            </ul>
 
-        <div class="sidebar-footer">
-            <button onclick="firstfunction()">Go to Portal</button>
-            <a href="/logout"><button>Logout</button></a>
-        </div>
-    </aside>
+            <div class="sidebar-footer">
+                <button onclick="firstfunction()">Go to Portal</button>
+                <a href="/logout"><button>Logout</button></a>
+            </div>
+        </aside>
 
-    <main class="content">
-        <header class="topbar">
-            <h4>Order History</h4>
-        </header>
+        <main class="content">
+            <header class="topbar">
+                <h4>Order History</h4>
+            </header>
 
-        {% if response %}
-        <div class="card">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Product ID</th>
-                        <th>Title</th>
-                        <th>Description</th>
-                        <th>Qty</th>
-                        <th>Total</th>
-                        <th>Payment</th>
-                        <th>Is Delivered</th>
-                    </tr>
-                </thead>
+            {% if response %}
+            <div class="card">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Product ID</th>
+                            <th>Title</th>
+                            <th>Description</th>
+                            <th>Qty</th>
+                            <th>Total</th>
+                            <th>Payment</th>
+                            <th>Is Delivered</th>
+                        </tr>
+                    </thead>
 
-                <tbody>
-                {% for res in response %}
-                    <tr>
-                        <td>{{ res.p_id }}</td>
-                        <td>{{ res.title }}</td>
-                        <td>{{ res.description }}</td>
-                        <td>{{ res.quantity }}</td>
-                        <td class="total-price">₹{{ res.total_price }}</td>
+                    <tbody>
+                        {% for res in response %}
+                        <tr>
+                            <td>{{ res.p_id }}</td>
+                            <td>{{ res.title }}</td>
+                            <td>{{ res.description }}</td>
+                            <td>{{ res.quantity }}</td>
+                            <td class="total-price">₹{{ res.total_price }}</td>
 
-                        <td class="payment-cell">
-                            {% if res.payment_status is none %}
+                            <td class="payment-cell">
+                                {% if res.payment_status is none %}
                                 <form action="/checkout/start" method="post">
                                     <button type="submit" class="pay-btn">💳 Pay Now</button>
                                 </form>
@@ -63,51 +63,51 @@
                                 <form action="/orders/cancel/{{ res.o_id }}" method="post">
                                     <button type="submit" class="cancel-btn">❌ Cancel</button>
                                 </form>
-                            {% else %}
+                                {% else %}
                                 <span class="status-badge">
                                     {{ res.payment_status | upper }}
                                 </span>
-                            {% endif %}
-                        </td>
+                                {% endif %}
+                            </td>
 
-                        <td>
-    <button
-        class="delivery-status {{ 'delivered' if res.is_delivered else 'pending' }}"
-        onclick="updateDelivery(this, '{{ res.p_id }}')">
-        {{ 'Delivered' if res.is_delivered else 'Pending' }}
-    </button>
-</td>
+                            <td>
+                                <button class="delivery-status {{ 'delivered' if res.is_delivered else 'pending' }}"
+                                    onclick="updateDelivery(this, '{{ res.p_id }}')">
+                                    {{ 'Delivered' if res.is_delivered else 'Pending' }}
+                                </button>
+                            </td>
 
-                    </tr>
-                {% endfor %}
-                </tbody>
-            </table>
-        </div>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
 
-        {% else %}
-        <div class="empty-state">
-            <p>🛒 You haven’t placed any orders yet.</p>
-        </div>
-        {% endif %}
-    </main>
-</div>
+            {% else %}
+            <div class="empty-state">
+                <p>🛒 You haven’t placed any orders yet.</p>
+            </div>
+            {% endif %}
+        </main>
+    </div>
 
-<script>
-function firstfunction() {
-    window.location.replace("/products");
-}
+    <script>
+        function firstfunction() {
+            window.location.replace("/products");
+        }
 
-function updateDelivery(btn, productId) {
-    fetch(`/updatedeliver/${productId}`, { method: 'PUT' })
-        .then(() => {
-            btn.classList.toggle('delivered');
-            btn.classList.toggle('pending');
-            btn.textContent =
-                btn.classList.contains('delivered') ? 'Delivered' : 'Pending';
-        });
-}
+        function updateDelivery(btn, productId) {
+            fetch(`/updatedeliver/${productId}`, { method: 'PUT' })
+                .then(() => {
+                    btn.classList.toggle('delivered');
+                    btn.classList.toggle('pending');
+                    btn.textContent =
+                        btn.classList.contains('delivered') ? 'Delivered' : 'Pending';
+                });
+        }
 
 
-</script>
+    </script>
 </body>
+
 </html>

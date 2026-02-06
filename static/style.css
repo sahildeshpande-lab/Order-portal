@@ -9,15 +9,14 @@ body {
     color: #1f2937;
     line-height: 1.4;
 }
-
-
 .app-header {
     background: #1e1e2d;
     color: #fff;
-    padding: 18px 30px;
+    padding: 20px 32px;
     display: flex;
     align-items: center;
     justify-content: space-between;
+    width: 100%;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
 }
 
@@ -31,7 +30,7 @@ body {
     background: #dc3545;
     color: #fff;
     border: none;
-    padding: 8px 18px;
+    padding: 10px 20px;
     border-radius: 12px;
     font-weight: 600;
     cursor: pointer;
@@ -42,111 +41,6 @@ body {
 .logout-btn:hover {
     background: #bb2d3b;
 }
-
-.fancy {
-    background-color: wheat;
-    border: 2px solid #000;
-    border-radius: 0;
-    box-sizing: border-box;
-    color: #b8a7a7;
-    cursor: pointer;
-    display: inline-block;
-    font-weight: 700;
-    letter-spacing: 0.05em;
-    margin: 0;
-    outline: none;
-    overflow: visible;
-    padding: 1.25em 2em;
-    position: relative;
-    text-align: center;
-    text-decoration: none;
-    text-transform: none;
-    transition: all 0.3s ease-in-out;
-    user-select: none;
-    font-size: 13px;
-}
-
-.fancy::before {
-    content: " ";
-    width: 1.5625rem;
-    height: 2px;
-    background: black;
-    top: 50%;
-    left: 1.5em;
-    position: absolute;
-    transform: translateY(-50%);
-    transform-origin: center;
-    transition: background 0.3s linear, width 0.3s linear;
-}
-
-.fancy .text {
-    font-size: 1.125em;
-    line-height: 1.33333em;
-    padding-left: 2em;
-    display: block;
-    text-align: left;
-    transition: all 0.3s ease-in-out;
-    text-transform: uppercase;
-    text-decoration: none;
-    color: rgb(125, 120, 120);
-}
-
-.fancy .top-key {
-    height: 2px;
-    width: 1.5625rem;
-    top: -2px;
-    left: 0.625rem;
-    position: absolute;
-    background: #e8e8e8;
-    transition: width 0.5s ease-out, left 0.3s ease-out;
-}
-
-.fancy .bottom-key-1 {
-    height: 2px;
-    width: 1.5625rem;
-    right: 1.875rem;
-    bottom: -2px;
-    position: absolute;
-    background: #e8e8e8;
-    transition: width 0.5s ease-out, right 0.3s ease-out;
-}
-
-.fancy .bottom-key-2 {
-    height: 2px;
-    width: 0.625rem;
-    right: 0.625rem;
-    bottom: -2px;
-    position: absolute;
-    background: #e8e8e8;
-    transition: width 0.5s ease-out, right 0.3s ease-out;
-}
-
-.fancy:hover {
-    color: white;
-    background: black;
-}
-
-.fancy:hover::before {
-    width: 0.9375rem;
-    background: white;
-}
-
-.fancy:hover .text {
-    color: white;
-    padding-left: 1.5em;
-}
-
-.fancy:hover .top-key {
-    left: -2px;
-    width: 0px;
-}
-
-.fancy:hover .bottom-key-1,
-.fancy:hover .bottom-key-2 {
-    right: 0;
-    width: 0;
-}
-
 .message {
     padding: 12px 16px;
     border-radius: 8px;
@@ -171,38 +65,126 @@ body {
 .text-center {
     text-align: center;
 }
-
-.center-section {
-    display: flex;
-    justify-content: center;
-    margin: 2rem 0;
-}
-
 .actions-row {
     display: flex;
     justify-content: center;
     gap: 1.5rem;
-    margin: 3rem 0;
+    margin: 3rem 1rem;
     flex-wrap: wrap;
 }
 
-.products-container{
+.fancy { 
+    background-color: wheat; 
+    border: 2px solid #000 ; 
+    border-radius: 0; 
+    box-sizing: border-box; 
+    color: #b8a7a7; 
+    cursor: pointer; 
+    display: inline-block; 
+    font-weight: 700 ;
+    letter-spacing: 0.05em;
+    margin: 0;
+    outline: none;
+    overflow: visible;
+    padding: 1.25em 2em;
+    position: relative;
+    text-align: center;
+    text-decoration: none;
+    text-transform: none;
+    transition: all 0.3s ease-in-out;
+    user-select: none;
+    font-size: 13px;
+} 
+.fancy::before { 
+    content: " "  ;
+    width: 1.5625rem ;
+    height: 2px ;
+    background: black  ;
+    top: 50% ;
+    left: 1.5em ;
+    position: absolute ; 
+    transform: translateY(-50%) ; 
+    transform-origin: center ; 
+    transition: background 0.3s linear, width 0.3s linear; 
+} 
+.fancy .text { 
+    font-size: 1.125em ;
+    line-height: 1.33333em  ;
+    padding-left: 2em ;
+    display: block ;
+    text-align: left ;
+    transition: all 0.3s ease-in-out ;
+    text-transform: uppercase ;
+    text-decoration: none ;
+    color: rgb(125, 120, 120) ;
+} 
+.fancy .top-key {
+    height: 2px ;
+    width: 1.5625rem;
+    top: -2px;
+    left: 0.625rem;
+    position: absolute;
+    background: #e8e8e8;
+    transition: width 0.5s ease-out, left 0.3s ease-out;
+} 
+.fancy .bottom-key-1 { 
+    height: 2px  ;
+    width: 1.5625rem ;
+    right: 1.875rem ;
+    bottom: -2px ;
+    position: absolute ;
+    background: #e8e8e8 ;
+    transition: width 0.5s ease-out, right 0.3s ease-out ;
+} 
+.fancy .bottom-key-2 { 
+    height: 2px  ;
+    width: 0.625rem ; 
+    right: 0.625rem ;
+    bottom: -2px ;
+    position: absolute ; 
+    background: #e8e8e8 ;
+    transition: width 0.5s ease-out, right 0.3s ease-out  ;
+} 
+.fancy:hover { 
+    color: white; 
+    background: black;
+} 
+.fancy:hover::before { 
+    width: 0.9375rem; 
+    background: white; 
+} 
+.fancy:hover .text { 
+    color: white; 
+    padding-left: 1.5em; 
+} 
+.fancy:hover .top-key { 
+    left: -2px; 
+    width: 0px; 
+} 
+.fancy:hover .bottom-key-1, .fancy:hover .bottom-key-2 { 
+    right: 0; 
+    width: 0; 
+}
+
+.fancy:hover {
+    background: black;
+    color: white;
+}
+.products-container {
     max-width: 1200px;
-    display: block;
-    margin: 10px;
-    padding: 15px;
+    margin: 0 auto;
+    padding: 20px;
 }
 
 .products-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    grid-template-columns: repeat(4, 1fr);
     gap: 1.8rem;
 }
 
 .product-col {
     display: flex;
 }
-
 .card {
     background: #ffffff;
     display: flex;
@@ -260,13 +242,6 @@ body {
     color: #9ca3af;
     font-size: 0.9rem;
 }
-.order-btn.active {
-    background: #bf3131;
-}
-
-.order-btn.active:hover {
-    background: #cf2222;
-}
 
 .new-price {
     font-weight: 700;
@@ -306,6 +281,13 @@ body {
     transform: scale(1.02);
 }
 
+.order-btn.active {
+    background: #bf3131;
+}
+
+.order-btn.active:hover {
+    background: #cf2222;
+}
 .order-form {
     margin-top: 10px;
     animation: fadeIn 0.3s ease;
@@ -328,64 +310,71 @@ body {
     color: white;
     width: 100%;
 }
-
-.fancy {
-    background-color: wheat;
-    border: 2px solid #000;
-    padding: 1.25em 2em;
-    position: relative;
-    font-weight: 700;
-    letter-spacing: 0.05em;
-    text-decoration: none;
-    color: #7d7878;
-    transition: all 0.3s ease-in-out;
-}
-
-.fancy:hover {
-    background: black;
-    color: white;
-}
-
 @keyframes fadeIn {
     from {
         opacity: 0;
         transform: translateY(6px);
     }
-
     to {
         opacity: 1;
         transform: translateY(0);
     }
 }
 
+@media (max-width: 1024px) {
+    .products-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
 @media (max-width: 768px) {
     .app-header {
         flex-direction: column;
-        gap: 10px;
+        gap: 12px;
         text-align: center;
+        padding: 24px 16px;
     }
 
     .logout-btn {
         width: 100%;
+        max-width: 280px;
+    }
+
+    .products-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
     }
 
     .card-img-top {
-        height: 180px;
+        height: 170px;
     }
 
-    .fancy,
-    .fancy-btn {
+    .fancy {
         width: 100%;
         text-align: center;
     }
 }
 
-@media (max-width: 576px) {
-    body {
-        font-size: 14px;
+@media (max-width: 480px) {
+    .products-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
     }
 
     .card-img-top {
-        height: 160px;
+        height: 140px;
+    }
+
+    .card-body h6 {
+        font-size: 13px;
+    }
+
+    .card-body p {
+        font-size: 12px;
+    }
+
+    .badge {
+        font-size: 10px;
+        padding: 4px 6px;
     }
 }
