@@ -21,13 +21,7 @@ app = FastAPI(
     title="Order portal")
 
 
-app.add_middleware(
-    SessionMiddleware,
-    secret_key=os.getenv("SESSION_SECRET", "dev-secret"),
-    same_site="lax",
-    https_only=False,
-    session_cookie="session",
-)
+app.add_middleware(SessionMiddleware,secret_key=os.getenv("SESSION_SECRET", "dev-secret"),same_site="lax",https_only=False,session_cookie="session",)
 
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -36,10 +30,7 @@ app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 templates = Jinja2Templates(directory="Template")
 
 
-pwd=CryptContext(
-    schemes=["bcrypt"],
-    deprecated = "auto"
-)
+pwd=CryptContext(schemes=["bcrypt"],deprecated = "auto")
 
 def hash_password(password:str)->str :
     if len(password.encode("utf-8")) > 72 :
@@ -93,16 +84,7 @@ def products_home(request: Request, db: Session = Depends(get_db)):
     success = request.session.pop("success", None)
     error = request.session.pop("error", None)
 
-    return templates.TemplateResponse(
-        "products.html",
-        {
-            "request": request,
-            "products": products,
-            "user_id": user_id,
-            "success": success,
-            "error": error
-        }
-    )
+    return templates.TemplateResponse("products.html",{  "request": request,"products": products,"user_id": user_id,"success": success,"error": error})
 
 @app.get("/login",tags=["Login User endpoint"])
 def login_page(request:Request):
@@ -110,22 +92,11 @@ def login_page(request:Request):
 
 
 @app.post("/login",tags=["Login User endpoint"])
-def login_form(
-    request: Request,
-    email: str = Form(...),
-    password: str = Form(...),
-    db: Session = Depends(get_db)
-):
+def login_form(request: Request,email: str = Form(...),password: str = Form(...),db: Session = Depends(get_db)):
     try :
         EmailCheck(email=email)
     except ValidationError :
-        return templates.TemplateResponse(
-            "index.html",
-            {
-                "request":request ,
-                "error":"Invalid email address"
-            }
-        )
+        return templates.TemplateResponse("index.html",{"request":request ,"error":"Invalid email address"})
     
     user=db.query(User).filter(User.email == email).first()
     if not user :
@@ -133,12 +104,7 @@ def login_form(
         return templates.TemplateResponse("register.html",{"request":request,"error":error})
     
     if user and not verify_password(password,user.password):
-        return templates.TemplateResponse(
-            "index.html",{
-                "request":request,
-                "error":"Password does not match"
-            }
-        )
+        return templates.TemplateResponse("index.html",{"request":request,"error":"Password does not match"})
     request.session["user_id"]=user.id
     request.session["success"] = "Login successful"
     return RedirectResponse(url="/products",status_code=303)
@@ -152,17 +118,13 @@ def register_user(request:Request, email:str=Form(...),password:str=Form(...),db
     try :
         EmailCheck(email=email)
     except ValidationError :
-        return templates.TemplateResponse(
-            "register.html",
-            {
-                "request":request ,
-                "error":"Invalid email address"
-            }
-        )
+        return templates.TemplateResponse("register.html",{"request":request ,"error":"Invalid email address"})
     user=db.query(User).filter(User.email == email).first()
     if user :
         message="User exists please login"
         return templates.TemplateResponse("index.html",{"request":request,"message":message})
+    if user and verify_password(password,user.password):
+        return templates.TemplateResponse("index.html",{"request":request,"message":"Valid credentials Please login"})
     if len(password)<5 :
         error="The length of password should be greater than 5"
         return templates.TemplateResponse("register.html",{"request":request,"error":error})
@@ -199,10 +161,7 @@ def products_page(request: Request,db: Session = Depends(get_db)):
     success= request.session.pop("success",None)
     error=request.session.pop("error",None)
     products = db.query(Products).all()
-    response= templates.TemplateResponse(
-        "products.html",
-        {"request": request, "products": products, "user_id": user_id,"success":success,"error":error} 
-    )
+    response= templates.TemplateResponse("products.html",{"request": request, "products": products, "user_id": user_id,"success":success,"error":error})
     return response
 
 
@@ -244,46 +203,23 @@ def addproducts_page(request:Request,current_user:User = Depends(user_authentica
     return no_cache(response)
 
 @app.post("/add-product", tags=["Add product endpoint"])
-def addproduct(
-    request: Request,
-    title: Optional[str] = Form(None),
-    description: Optional[str] = Form(None),
-    price: Optional[float] = Form(None),
-    discount: Optional[float] = Form(None),
-    image: Optional[UploadFile] = File(None),
-    category: Optional[str] = Form(None),
-    current_user: Optional[User] = Depends(user_authentication),
-    db: Session = Depends(get_db)
-):
+def addproduct(request: Request,title: Optional[str] = Form(None),description: Optional[str] = Form(None),price: Optional[float] = Form(None),discount: Optional[float] = Form(None),image: Optional[UploadFile] = File(None),category: Optional[str] = Form(None),current_user: Optional[User] = Depends(user_authentication),db: Session = Depends(get_db)):
     if not current_user:
         return RedirectResponse("/login", status_code=303)
 
     if not all([title, description, category, image]) or price is None or discount is None:
         message = "All fields are required"
-        return templates.TemplateResponse(
-            "addproduct.html",
-            {"request": request, "message": message}
-        )
+        return templates.TemplateResponse("addproduct.html",{"request": request, "message": message})
 
     if discount < 10 or discount > 90:
         message = "Please select a valid discount range (10–90)"
-        return templates.TemplateResponse(
-            "addproduct.html",
-            {"request": request, "message": message}
-        )
+        return templates.TemplateResponse("addproduct.html",{"request": request, "message": message})
 
-    existing = (
-        db.query(Products)
-        .filter(func.lower(Products.title) == title.strip().lower())
-        .first()
-    )
+    existing = (db.query(Products).filter(func.lower(Products.title) == title.strip().lower()).first())
 
     if existing:
         message = "Product with this name already exists"
-        return templates.TemplateResponse(
-            "addproduct.html",
-            {"request": request, "message": message}
-        )
+        return templates.TemplateResponse("addproduct.html",{"request": request, "message": message})
 
     UPLOAD_DIR = "uploads"
     os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -295,14 +231,7 @@ def addproduct(
     with open(image_path, "wb") as buffer:
         shutil.copyfileobj(image.file, buffer)
 
-    new_product = Products(
-        title=title.strip(),
-        description=description.strip(),
-        price=price,
-        discount=discount,
-        image=image_path,
-        category=category.strip()
-    )
+    new_product = Products(title=title.strip(),description=description.strip(),price=price,discount=discount,image=image_path,category=category.strip())
 
     db.add(new_product)
     db.commit()
@@ -311,16 +240,12 @@ def addproduct(
     products = db.query(Products).all()
     message = "Product added successfully"
 
-    return templates.TemplateResponse(
-        "products.html",
-        {"request": request, "products": products, "message": message})
+    return templates.TemplateResponse("products.html",{"request": request, "products": products, "message": message})
 
 @app.post("/order",tags=["Order product endpoint"])
 def create_order(request:Request,product_id : int =Form(...),quantity:int = Form(...),current_user: User = Depends(user_authentication),db:Session=Depends(get_db)):
     
     product=db.query(Products).filter(Products.p_id==product_id).first()
-
-
     if not product :
         return RedirectResponse(url="/products",status_code=303)
     
@@ -336,14 +261,7 @@ def create_order(request:Request,product_id : int =Form(...),quantity:int = Form
     discounted_price = product.price - (product.price * product.discount) /100 
     total_price= quantity * discounted_price
 
-    order=Order(
-        c_id=current_user.id,
-        p_id=product.p_id,
-        total_price=total_price,
-        payment_status="pending",
-        is_delivered = False ,
-        quantity=quantity
-    )
+    order=Order(c_id=current_user.id,p_id=product.p_id,total_price=total_price,payment_status="pending",is_delivered = False ,quantity=quantity)
 
     db.add(order)
     db.commit()
@@ -375,10 +293,7 @@ def payment_page(request: Request,current_user: User = Depends(user_authenticati
 
     total_amount = sum(o.total_price for o in orders)
 
-    response = templates.TemplateResponse(
-        "payment.html",
-        {"request": request, "total_amount": total_amount}
-    )
+    response = templates.TemplateResponse("payment.html",{"request": request, "total_amount": total_amount})
 
     return no_cache(response)
 
@@ -394,32 +309,18 @@ def process_payment(request: Request,method: str = Form(...),current_user: User 
     transaction = None
 
     if method != "COD":
-        transaction = Transactions(
-            created_at=datetime.datetime.now(),
-            amount=total_amount,
-            status="success"
-        )
+        transaction = Transactions(created_at=datetime.datetime.now(),mount=total_amount,status="success")
         db.add(transaction)
         db.commit()
         db.refresh(transaction)
 
     for order in orders:
-        existing_payment = (
-            db.query(Payment)
-            .filter(Payment.o_id == order.o_id)
-            .first()
-        )
+        existing_payment = (db.query(Payment).filter(Payment.o_id == order.o_id).first())
 
         if existing_payment:
             continue
 
-        payment = Payment(
-            o_id=order.o_id,
-            t_id=transaction.t_id if transaction else None,
-            amount=order.total_price,
-            method="Cash on Delivery" if method == "COD" else method,
-            status="completed"
-        )
+        payment = Payment(o_id=order.o_id,t_id=transaction.t_id if transaction else None,amount=order.total_price,method="Cash on Delivery" if method == "COD" else method,status="completed")
         db.add(payment)
         order.payment_status = "COD" if method == "COD" else "PAID"
 
@@ -440,30 +341,14 @@ def order(request:Request,user_id:int,current_user:User=Depends(user_authenticat
     response = [] 
 
     for o,p in orders :
-       response.append(OrderResponse(
-        o_id = o.o_id,
-        p_id=p.p_id,
-        title=p.title,
-        description=p.description,
-        total_price=o.total_price,
-        quantity=o.quantity,
-        is_delivered=o.is_delivered,
-        payment_status=None if o.payment_status == "pending" else o.payment_status))
+       response.append(OrderResponse(o_id = o.o_id,p_id=p.p_id,title=p.title,description=p.description,total_price=o.total_price,quantity=o.quantity,is_delivered=o.is_delivered,payment_status=None if o.payment_status == "pending" else o.payment_status))
     
     response= templates.TemplateResponse("second.html",{"request":request,"response":response,"order":orders,"user_id":user_id})
     return no_cache(response)
 
 @app.post("/orders/cancel/{o_id}", tags=["Cancel order"])
 def cancel_order(request:Request,o_id: int,current_user: User = Depends(user_authentication),db: Session = Depends(get_db)):
-    order = (
-        db.query(Order)
-        .filter(
-            Order.o_id == o_id,
-            Order.c_id == current_user.id,
-            Order.payment_status == "pending"
-        )
-        .first()
-    )
+    order = (db.query(Order).filter(Order.o_id == o_id, Order.c_id == current_user.id,Order.payment_status == "pending").first())
 
     if not order:
         message="Order not found"
@@ -483,7 +368,6 @@ def cancel_order(request:Request,o_id: int,current_user: User = Depends(user_aut
 def update_delivery(request: Request,productid: int,current_user: User = Depends(user_authentication),db: Session = Depends(get_db)):
     order_update = (db.query(Order).filter(Order.p_id == productid,Order.c_id == current_user.id,func.lower(Order.payment_status).in_(["cod", "paid"])).first())
 
-    
     if not order_update:
         raise HTTPException(status_code=404, detail="Order not found or unpaid")
 
@@ -493,11 +377,7 @@ def update_delivery(request: Request,productid: int,current_user: User = Depends
     order_update.is_delivered = True
     db.commit()
 
-    return RedirectResponse(
-        f"/products/get-orders/{current_user.id}",
-        status_code=303
-    )
-
+    return RedirectResponse(f"/products/get-orders/{current_user.id}",status_code=303)
 
 
 @app.get("/products/get-orders/{user_id}/productmanager",response_model=list[ProductManger],tags=["Product manager endpoint"])
@@ -509,14 +389,7 @@ def product_manager(request:Request,user_id:int,current_user:User = Depends(user
     pro=db.query(Order,Products).join(Products,Order.p_id==Products.p_id).filter(Order.c_id==current_user.id).all()
     response=[]
     for o,p in pro :
-        response.append(ProductManger(
-        p_id=p.p_id,
-        title=p.title,
-        price=p.price,
-        quantity=o.quantity,
-        discount=p.discount,
-        total_price=o.total_price
-        ))
+        response.append(ProductManger(p_id=p.p_id,title=p.title,price=p.price,quantity=o.quantity,discount=p.discount,total_price=o.total_price))
     response= templates.TemplateResponse("product_manager.html",{"request":request,"user_id":current_user.id,"pro":response})
     return no_cache(response)
    
@@ -529,12 +402,7 @@ def get_category(request:Request,user_id:int,current_user=Depends(user_authentic
     product_category=db.query(Order,Products).join(Products,Order.p_id==Products.p_id).filter(Order.c_id==user_id).all()
     response=[]
     for o,p in product_category:
-        response.append(ProductCategory(
-            title=p.title,
-            category=p.category,
-            discount=p.discount,
-            total_price=o.total_price
-        ))
+        response.append(ProductCategory(title=p.title,category=p.category,discount=p.discount,total_price=o.total_price))
 
     response= templates.TemplateResponse("category.html",{"request":request,"user_id":current_user.id,"response":response})
     return no_cache(response)
