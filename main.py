@@ -251,6 +251,10 @@ def create_order(request:Request,product_id : int =Form(...),quantity:int = Form
     
     if quantity <= 0 :
         return RedirectResponse(url="/products",status_code=303)
+
+    if quantity>100 :
+        request.session["error"] = "Max quantity is 100"
+        return RedirectResponse(url="/products",status_code=303)
     
     existing_order = db.query(Order).filter(Order.c_id==current_user.id,Order.p_id==product.p_id,Order.is_delivered==False).first()
 
@@ -366,14 +370,8 @@ def cancel_order(request:Request,o_id: int,current_user: User = Depends(user_aut
 
 @app.put("/updatedeliver/{productid}")
 def update_delivery(request: Request,productid: int,current_user: User = Depends(user_authentication),db: Session = Depends(get_db)):
-    order_update = (db.query(Order).filter(Order.p_id == productid,Order.c_id == current_user.id,func.lower(Order.payment_status).in_(["cod", "paid"])).first())
-
-    if not order_update:
-        raise HTTPException(status_code=404, detail="Order not found or unpaid")
-
-    if order_update.is_delivered:
-        raise HTTPException(status_code=400, detail="Order already delivered")
-
+    order_update = (db.query(Order).filter(Order.p_id == productid,Order.c_id == current_user.id,Order.payment_status in ["COD", "PAID"] ).first())
+    
     order_update.is_delivered = True
     db.commit()
 
