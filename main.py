@@ -58,8 +58,7 @@ def create_access_token(user_id:int) -> str:
     return jwt.encode(payload,SECRET_KEY,algorithm=ALGORITHM)
 
 
-def csrf_protect(request: Request,csrf_token: str = Form(...)
-):
+def csrf_protect(request: Request,csrf_token: str | None =Form(None)):
     cookie_token = request.cookies.get("csrf_token")
 
     if not cookie_token or not csrf_token:
@@ -155,9 +154,9 @@ def login_form(request: Request,email: str = Form(...),password: str = Form(...)
 
     response = RedirectResponse("/",status_code=303)
 
-    response.set_cookie(key="access_token",value=access_token,httponly=True,samesite="lax",secure=False,path="/")
+    response.set_cookie(key="access_token",value=access_token,httponly=True,samesite="lax",secure=True,path="/")
 
-    response.set_cookie(key="csrf_token",value=csrf_token,httponly=False,samesite="lax",secure=False,path="/")
+    response.set_cookie(key="csrf_token",value=csrf_token,httponly=False,samesite="lax",secure=True,path="/")
     return response
 
 @app.get("/logout",include_in_schema=False,tags=["logout"])
@@ -190,7 +189,7 @@ def register_user(request:Request, email:str=Form(...),password:str=Form(...),db
     csrf_token = generate_csrf_token()
     response = RedirectResponse("/",303)
     response.set_cookie("access_token",token,httponly=True,samesite="lax")
-    response.set_cookie(key="csrf_token",value=csrf_token,httponly=False,samesite="lax",secure=False,path="/")
+    response.set_cookie(key="csrf_token",value=csrf_token,httponly=False,samesite="lax",secure=True,path="/")
     return response
 
 @app.get("/products", tags=["Products dashboard endpoint"])
