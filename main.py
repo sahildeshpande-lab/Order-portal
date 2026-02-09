@@ -66,6 +66,9 @@ def csrf_protect(request: Request,csrf_token: str | None =Form(None)):
 
     if not secrets.compare_digest(cookie_token, csrf_token):
         raise HTTPException(status_code=403, detail="Invalid CSRF token")
+    print("COOKIE:", request.cookies.get("csrf_token"))
+    print("FORM:", csrf_token)
+
 
 
 def user_authentication(request:Request,db:Session=Depends(get_db))-> User:
@@ -119,6 +122,16 @@ async def not_found_handler(request: Request, exc: StarletteHTTPException):
     if exc.status_code == 404:
         return templates.TemplateResponse("404.html",{"request": request,"path": request.url.path},status_code=404)
     return JSONResponse(status_code=exc.status_code,content={"detail": exc.detail},)
+
+@app.middleware("http")
+async def ensure_csrf_cookie(request: Request, call_next):
+    response = await call_next(request)
+
+    if "csrf_token" not in request.cookies:
+        csrf_token = generate_csrf_token()
+        response.set_cookie(key="csrf_token",value=csrf_token,httponly=False,samesite="lax",secure=True)
+    return response
+
 
 @app.get("/")
 def products_home(request:Request,db:Session=Depends(get_db)):
