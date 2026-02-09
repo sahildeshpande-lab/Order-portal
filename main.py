@@ -139,7 +139,7 @@ def products_home(request:Request,db:Session=Depends(get_db)):
 
     user = get_current_user_optional(request,db)
 
-    return templates.TemplateResponse("products.html",{"request":request,"products":products,"user":user})
+    return templates.TemplateResponse("products.html",{"request":request,"products":products,"user":user, "user_id": user.id if user else None})
 
 @app.get("/login")
 def login_page(request: Request, db: Session = Depends(get_db)):
@@ -208,7 +208,7 @@ def register_user(request:Request, email:str=Form(...),password:str=Form(...),db
 @app.get("/products", tags=["Products dashboard endpoint"])
 def products_page(request: Request,current_user: User = Depends(user_authentication),db: Session = Depends(get_db),):
     products = db.query(Products).all()
-    return templates.TemplateResponse("products.html",{"request": request, "products": products, "user": current_user})
+    return templates.TemplateResponse("products.html",{"request": request, "products": products, "user_id": current_user.id,"user":current_user})
 
 @app.get("/forget-password",tags=["Forget Password endpoint"])
 def display_forget_password(request:Request):
@@ -285,7 +285,7 @@ def addproduct(request: Request,title: Optional[str] = Form(None),description: O
     return templates.TemplateResponse("products.html",{"request": request, "products": products, "message": message})
 
 @app.post("/order",tags=["Order product endpoint"])
-def create_order(request:Request,product_id : int =Form(...),quantity:int = Form(...),current_user: User = Depends(user_authentication),db:Session=Depends(get_db),csrf=Depends(csrf_protect)):
+def create_order(request:Request,product_id : int =Form(...),quantity:int = Form(...),current_user: User = Depends(user_authentication),db:Session=Depends(get_db)):
     
     product=db.query(Products).filter(Products.p_id==product_id).first()
     if not product :
@@ -403,8 +403,6 @@ def cancel_order(request:Request,o_id: int,current_user: User = Depends(user_aut
     message="Order removed successfully"
     request.session["success"]=message
     return RedirectResponse(f"/products/get-orders/{current_user.id}",status_code=303)
- 
-
 
 @app.put("/updatedeliver/{productid}")
 def update_delivery(request: Request,productid: int,current_user: User = Depends(user_authentication),db: Session = Depends(get_db)):
