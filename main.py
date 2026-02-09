@@ -1,10 +1,11 @@
 from fastapi import FastAPI, Form, Depends, Request,UploadFile ,File , HTTPException
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse , JSONResponse 
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import  Session
 from pydantic import  ValidationError
 from typing import List ,Optional
+from jose import jwt , JWTError
 from db import User , Products ,Order ,Transactions ,Payment,EmailCheck  , OrderResponse ,ProductManger , ProductCategory  , get_db ,ProductResponse
 import shutil 
 from starlette.middleware.sessions import SessionMiddleware
@@ -12,13 +13,14 @@ from passlib.context import CryptContext
 import datetime
 import uuid
 from sqlalchemy import func
-
+from starlette.exceptions import HTTPException as StarletteHTTPException
 import os
+import secrets
+import random
 
 
 
-app = FastAPI(
-    title="Order portal")
+app = FastAPI(title="Order portal")
 
 
 app.add_middleware(SessionMiddleware,secret_key=os.getenv("SESSION_SECRET", "dev-secret"),same_site="lax",https_only=False,session_cookie="session",)
@@ -32,6 +34,11 @@ templates = Jinja2Templates(directory="Template")
 
 pwd=CryptContext(schemes=["bcrypt"],deprecated = "auto")
 
+SECRET_KEY = os.getenv("JWT_SECRET","dev-jwt-secret")
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 
+
+
 def hash_password(password:str)->str :
     if len(password.encode("utf-8")) > 72 :
         raise HTTPException(status_code=400,detail="Password to long ")
@@ -40,13 +47,42 @@ def hash_password(password:str)->str :
 def verify_password(plain_password:str,hashed_password:str) -> bool :
     return pwd.verify(plain_password,hashed_password)
 
+def generate_csrf_token():
+    return secrets.token_urlsafe(32)
+
+def create_access_token(user_id:int) -> str:
+    payload = {
+        "sub":str(user_id),
+        "exp" : datetime.datetime.now() + datetime.timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    }
+    return jwt.encode(payload,SECRET_KEY,algorithm=ALGORITHM)
+
+
+def csrf_protect(request: Request,csrf_token: str = Form(...)
+):
+    cookie_token = request.cookies.get("csrf_token")
+
+    if not cookie_token or not csrf_token:
+        raise HTTPException(status_code=403, detail="CSRF token missing")
+
+    if not secrets.compare_digest(cookie_token, csrf_token):
+        raise HTTPException(status_code=403, detail="Invalid CSRF token")
+
+
 def user_authentication(request:Request,db:Session=Depends(get_db))-> User:
-    user_id = request.session.get("user_id")
-    if not user_id :
+    token = request.cookies.get("access_token")
+    if not token :
         raise HTTPException(status_code=401)
+
+    try :
+        payload = jwt.decode(token,SECRET_KEY,algorithms=[ALGORITHM])
+        user_id = int(payload.get("sub"))
+    except JWTError :
+        raise HTTPException(status_code=401)
+
+
     user = db.query(User).filter(User.id==user_id).first()
     if not user :
-        request.session.clear()
         raise  HTTPException(status_code=401, detail="Invalid session")
     return user
 
@@ -56,15 +92,28 @@ def no_cache(response):
     return response
 
 
+def get_current_user_optional(request:Request,db:Session):
+    token = request.cookies.get("access_token")
+    if not token : 
+        return None 
+    try :
+        payload = jwt.decode(token , SECRET_KEY, algorithms=[ALGORITHM])
+        user_id = int(payload.get("sub"))
+        if not user_id :
+            return None 
+    except JWTError :
+        return None 
+
+    return db.query(User).filter(User.id == user_id).first()
+
+def generate_otp()-> str :
+    return str(random.randint(100000,999999))
 
 @app.exception_handler(HTTPException)
 async def auth_exception_handler(request: Request, exc: HTTPException):
-    if exc.status_code == 401 and request.url.path != "/login":
-        return RedirectResponse(url="/login", status_code=303)
-    raise exc
-
-from starlette.exceptions import HTTPException as StarletteHTTPException
-from fastapi.responses import JSONResponse
+    if exc.status_code == 401 and request.headers.get("accept", "").startswith("text/html"):
+        return RedirectResponse("/login", 303)
+    return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
 
 @app.exception_handler(StarletteHTTPException)
 async def not_found_handler(request: Request, exc: StarletteHTTPException):
@@ -72,31 +121,26 @@ async def not_found_handler(request: Request, exc: StarletteHTTPException):
         return templates.TemplateResponse("404.html",{"request": request,"path": request.url.path},status_code=404)
     return JSONResponse(status_code=exc.status_code,content={"detail": exc.detail},)
 
-
-
 @app.get("/")
-def products_home(request: Request, db: Session = Depends(get_db)):
+def products_home(request:Request,db:Session=Depends(get_db)):
     products = db.query(Products).all()
-    try:
-        user_id = request.session.get("user_id")
-    except :
-        user_id : None
-    success = request.session.pop("success", None)
-    error = request.session.pop("error", None)
 
-    return templates.TemplateResponse("products.html",{  "request": request,"products": products,"user_id": user_id,"success": success,"error": error})
+    user = get_current_user_optional(request,db)
 
-@app.get("/login",tags=["Login User endpoint"])
-def login_page(request:Request):
-    return  templates.TemplateResponse("index.html",{"request":request})
+    return templates.TemplateResponse("products.html",{"request":request,"products":products,"user":user})
 
+@app.get("/login")
+def login_page(request: Request, db: Session = Depends(get_db)):
+    if get_current_user_optional(request, db):
+        return RedirectResponse("/", 303)
+    return templates.TemplateResponse("index.html",{"request": request, "user": None})
 
 @app.post("/login",tags=["Login User endpoint"])
-def login_form(request: Request,email: str = Form(...),password: str = Form(...),db: Session = Depends(get_db)):
+def login_form(request: Request,email: str = Form(...),password: str = Form(...),db: Session = Depends(get_db),csrf=Depends(csrf_protect)):
     try :
         EmailCheck(email=email)
     except ValidationError :
-        return templates.TemplateResponse("index.html",{"request":request ,"error":"Invalid email address"})
+        return templates.TemplateResponse("index.html",{"request":request ,"user": None,"error":"Invalid email address"})
     
     user=db.query(User).filter(User.email == email).first()
     if not user :
@@ -104,73 +148,62 @@ def login_form(request: Request,email: str = Form(...),password: str = Form(...)
         return templates.TemplateResponse("register.html",{"request":request,"error":error})
     
     if user and not verify_password(password,user.password):
-        return templates.TemplateResponse("index.html",{"request":request,"error":"Password does not match"})
-    request.session["user_id"]=user.id
-    request.session["success"] = "Login successful"
-    return RedirectResponse(url="/products",status_code=303)
+        return templates.TemplateResponse("index.html",{"request":request,"user": None,"error":"Password does not match"})
+    
+    access_token= create_access_token(user.id)
+    csrf_token = generate_csrf_token()
+
+    response = RedirectResponse("/",status_code=303)
+
+    response.set_cookie(key="access_token",value=access_token,httponly=True,samesite="lax",secure=False,path="/")
+
+    response.set_cookie(key="csrf_token",value=csrf_token,httponly=False,samesite="lax",secure=False,path="/")
+    return response
+
+@app.get("/logout",include_in_schema=False,tags=["logout"])
+def logout(request:Request):
+    response = RedirectResponse("/",status_code=303)
+    response.delete_cookie("access_token",path="/")
+    request.session.clear()
+    return no_cache(response)
 
 @app.get("/register",tags=["Register User endpoint"])
 def register_page(request: Request):
     return templates.TemplateResponse("register.html", {"request": request})
 
 @app.post("/register",tags=["Register User endpoint"])
-def register_user(request:Request, email:str=Form(...),password:str=Form(...),db:Session=Depends(get_db)):
+def register_user(request:Request, email:str=Form(...),password:str=Form(...),db:Session=Depends(get_db),csrf=Depends(csrf_protect)):
     try :
         EmailCheck(email=email)
     except ValidationError :
         return templates.TemplateResponse("register.html",{"request":request ,"error":"Invalid email address"})
-    user=db.query(User).filter(User.email == email).first()
-    if user :
-        message="User exists please login"
-        return templates.TemplateResponse("index.html",{"request":request,"message":message})
-    if user and verify_password(password,user.password):
-        return templates.TemplateResponse("index.html",{"request":request,"message":"Valid credentials Please login"})
-    if len(password)<5 :
-        error="The length of password should be greater than 5"
-        return templates.TemplateResponse("register.html",{"request":request,"error":error})
-
-    hashed_pw=hash_password(password)
-    new_user = User(email=email,password=hashed_pw)
+    
+    if db.query(User).filter(User.email == email).first() :
+        return templates.TemplateResponse("index.html",{"request":request,"message" :"User already exists"})
+    hashed=hash_password(password)
+    new_user = User(email=email,password=hashed)
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
 
-    request.session["user_id"] = new_user.id
-    request.session["success"] = "Account created successfully"
-    return RedirectResponse(url="/products", status_code=303)
-
-@app.get("/logout",tags=["logout"])
-def logout(request:Request,current_user:User=Depends(user_authentication)):
-    if current_user : 
-        request.session.clear()
-        response = RedirectResponse(url="/", status_code=303)
-        response.delete_cookie("session")
-        return no_cache(response)
-
-@app.get("/products",tags=["Products dashboard endpoint"])
-def products_page(request: Request,db: Session = Depends(get_db)):
-    products=db.query(Products).all()
-    try:
-        user_id =request.session.get("user_id")
-    except :
-        user_id : None
-    
-    if user_id :
-        return no_cache(RedirectResponse("/",status_code=303))
-
-    success= request.session.pop("success",None)
-    error=request.session.pop("error",None)
-    products = db.query(Products).all()
-    response= templates.TemplateResponse("products.html",{"request": request, "products": products, "user_id": user_id,"success":success,"error":error})
+    token = create_access_token(new_user.id)
+    csrf_token = generate_csrf_token()
+    response = RedirectResponse("/",303)
+    response.set_cookie("access_token",token,httponly=True,samesite="lax")
+    response.set_cookie(key="csrf_token",value=csrf_token,httponly=False,samesite="lax",secure=False,path="/")
     return response
 
+@app.get("/products", tags=["Products dashboard endpoint"])
+def products_page(request: Request,current_user: User = Depends(user_authentication),db: Session = Depends(get_db),):
+    products = db.query(Products).all()
+    return templates.TemplateResponse("products.html",{"request": request, "products": products, "user": current_user})
 
 @app.get("/forget-password",tags=["Forget Password endpoint"])
 def display_forget_password(request:Request):
     return templates.TemplateResponse("forget-password.html",{"request":request})
 
 @app.post("/password",tags=["Forget Password endpoint"])
-def update_password(request:Request,email:str=Form(...),password:str=Form(...),db:Session=Depends(get_db)):
+def update_password(request:Request,email:str=Form(...),otp:str=Form(...),password:str=Form(...),db:Session=Depends(get_db),csrf=Depends(csrf_protect)):
 
     check_email=db.query(User).filter(User.email==email).first()
      
@@ -194,16 +227,13 @@ def update_password(request:Request,email:str=Form(...),password:str=Form(...),d
     request.session["success"]="Password updated successfully please login"
     return RedirectResponse(url="/login",status_code=303)
 
-
-
 @app.get("/addproduct",tags=["Add product endpoint"])
 def addproducts_page(request:Request,current_user:User = Depends(user_authentication)):
-    m="Fill the details for adding a product"
-    response= templates.TemplateResponse("addproduct.html",{"request":request,"m":m,"user_id":current_user.id})
+    response= templates.TemplateResponse("addproduct.html",{"request":request,"user_id":current_user.id})
     return no_cache(response)
 
 @app.post("/add-product", tags=["Add product endpoint"])
-def addproduct(request: Request,title: Optional[str] = Form(None),description: Optional[str] = Form(None),price: Optional[float] = Form(None),discount: Optional[float] = Form(None),image: Optional[UploadFile] = File(None),category: Optional[str] = Form(None),current_user: Optional[User] = Depends(user_authentication),db: Session = Depends(get_db)):
+def addproduct(request: Request,title: Optional[str] = Form(None),description: Optional[str] = Form(None),price: Optional[float] = Form(None),discount: Optional[float] = Form(None),image: Optional[UploadFile] = File(None),category: Optional[str] = Form(None),current_user: Optional[User] = Depends(user_authentication),db: Session = Depends(get_db),csrf=Depends(csrf_protect)):
     if not current_user:
         return RedirectResponse("/login", status_code=303)
 
@@ -243,7 +273,7 @@ def addproduct(request: Request,title: Optional[str] = Form(None),description: O
     return templates.TemplateResponse("products.html",{"request": request, "products": products, "message": message})
 
 @app.post("/order",tags=["Order product endpoint"])
-def create_order(request:Request,product_id : int =Form(...),quantity:int = Form(...),current_user: User = Depends(user_authentication),db:Session=Depends(get_db)):
+def create_order(request:Request,product_id : int =Form(...),quantity:int = Form(...),current_user: User = Depends(user_authentication),db:Session=Depends(get_db),csrf=Depends(csrf_protect)):
     
     product=db.query(Products).filter(Products.p_id==product_id).first()
     if not product :
@@ -253,13 +283,11 @@ def create_order(request:Request,product_id : int =Form(...),quantity:int = Form
         return RedirectResponse(url="/products",status_code=303)
 
     if quantity>100 :
-        request.session["error"] = "Max quantity is 100"
         return RedirectResponse(url="/products",status_code=303)
     
     existing_order = db.query(Order).filter(Order.c_id==current_user.id,Order.p_id==product.p_id,Order.is_delivered==False).first()
 
     if existing_order :
-        request.session["error"] = " Product already in a bag"
         return RedirectResponse(url="/products",status_code=303)
 
     discounted_price = product.price - (product.price * product.discount) /100 
@@ -269,8 +297,6 @@ def create_order(request:Request,product_id : int =Form(...),quantity:int = Form
 
     db.add(order)
     db.commit()
-    
-    request.session["success"] = "Products added successfully"
     return RedirectResponse(url="/",status_code=303)
 
 @app.post("/checkout/start")
@@ -302,7 +328,7 @@ def payment_page(request: Request,current_user: User = Depends(user_authenticati
     return no_cache(response)
 
 @app.post("/payment")
-def process_payment(request: Request,method: str = Form(...),current_user: User = Depends(user_authentication),db: Session = Depends(get_db)):
+def process_payment(request: Request,method: str = Form(...),current_user: User = Depends(user_authentication),db: Session = Depends(get_db),csrf=Depends(csrf_protect)):
     orders = (db.query(Order).filter(Order.c_id == current_user.id,Order.payment_status == "pending").all())
 
     if not orders:
@@ -351,7 +377,7 @@ def order(request:Request,user_id:int,current_user:User=Depends(user_authenticat
     return no_cache(response)
 
 @app.post("/orders/cancel/{o_id}", tags=["Cancel order"])
-def cancel_order(request:Request,o_id: int,current_user: User = Depends(user_authentication),db: Session = Depends(get_db)):
+def cancel_order(request:Request,o_id: int,current_user: User = Depends(user_authentication),db: Session = Depends(get_db),csrf=Depends(csrf_protect)):
     order = (db.query(Order).filter(Order.o_id == o_id, Order.c_id == current_user.id,Order.payment_status == "pending").first())
 
     if not order:
@@ -411,7 +437,7 @@ def updatediscount(request:Request,current_user=Depends(user_authentication)):
     return no_cache(response)
 
 @app.post("/updatediscount" , tags=["update discount endpoint"])
-def updatediscount(request:Request,product_id:int=Form(...), discount:int=Form(...),current_user=Depends(user_authentication),db:Session=Depends(get_db)):
+def updatediscount(request:Request,product_id:int=Form(...), discount:int=Form(...),current_user=Depends(user_authentication),db:Session=Depends(get_db),csrf=Depends(csrf_protect)):
     exisiting = db.query(Products).filter(Products.p_id==product_id).first()
     if exisiting is None:
         message="No product found"

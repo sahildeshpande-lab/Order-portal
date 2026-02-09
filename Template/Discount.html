@@ -21,6 +21,7 @@
                 <p class="message" style="color:red">{{ message }}</p>
             {% endif %}
             <form method="POST" action="/updatediscount">
+                <input type="hidden" name="csrf_token" value="{{ request.cookies.csrf_token }}">
                 <div class="mb-3">
                     <button type="url" class="btn-back">
                     <a href="/products" style="text-decoration: none; color: aliceblue;">

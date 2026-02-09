@@ -20,6 +20,7 @@
 
 <form action="/register" method="post">
     <h3>Register User</h3>
+    <input type="hidden" name="csrf_token" value="{{ request.cookies.csrf_token }}">
 
     <label for="email">Email</label>
     <input type="email" name="email" id="email" placeholder="Enter your email" required>
