@@ -26,6 +26,7 @@ class Products(Base):
     discount=Column(Integer,nullable=False)
     image=Column(String,nullable=False)
     category=Column(String,nullable=False)
+    stock_quantity=Column(Integer,nullable=False,default=100)
 
 class Order(Base):
     __tablename__ = "orders"
@@ -70,6 +71,7 @@ class ProductResponse(BaseModel):
     discount : int
     image : str
     category:str
+    stock_quantity:int
 
     class Config:
         from_attributes=True

@@ -251,7 +251,7 @@ def addproducts_page(request:Request,current_user:User = Depends(user_authentica
     return no_cache(response)
 
 @app.post("/add-product", tags=["Add product endpoint"])
-def addproduct(request: Request,title: Optional[str] = Form(None),description: Optional[str] = Form(None),price: Optional[float] = Form(None),discount: Optional[float] = Form(None),image: Optional[UploadFile] = File(None),category: Optional[str] = Form(None),current_user: Optional[User] = Depends(user_authentication),db: Session = Depends(get_db),csrf=Depends(csrf_protect)):
+def addproduct(request: Request,title: Optional[str] = Form(None),description: Optional[str] = Form(None),price: Optional[float] = Form(None),discount: Optional[float] = Form(None),image: Optional[UploadFile] = File(None),category: Optional[str] = Form(None),quantity:Optional[int] = Form(None),current_user: Optional[User] = Depends(user_authentication),db: Session = Depends(get_db),csrf=Depends(csrf_protect)):
     if not current_user:
         return RedirectResponse("/login", status_code=303)
 
@@ -279,7 +279,7 @@ def addproduct(request: Request,title: Optional[str] = Form(None),description: O
     with open(image_path, "wb") as buffer:
         shutil.copyfileobj(image.file, buffer)
 
-    new_product = Products(title=title.strip(),description=description.strip(),price=price,discount=discount,image=image_path,category=category.strip())
+    new_product = Products(title=title.strip(),description=description.strip(),price=price,discount=discount,image=image_path,category=category.strip(),stock_quantity=quantity)
 
     db.add(new_product)
     db.commit()
@@ -301,6 +301,16 @@ def create_order(request:Request,product_id : int =Form(...),quantity:int = Form
         return RedirectResponse(url="/products",status_code=303)
 
     if quantity>100 :
+        return RedirectResponse(url="/products",status_code=303)
+    
+    if quantity > product.stock_quantity :
+        request.session["error"] = "Thanks for adding the product , but we don't have stock right now . Stay tunned we will update it !! "
+        return RedirectResponse(url="/products",status_code=303)
+    
+    
+    product.stock_quantity = product.stock_quantity - quantity 
+
+    if product.stock_quantity < 0 :
         return RedirectResponse(url="/products",status_code=303)
     
     existing_order = db.query(Order).filter(Order.c_id==current_user.id,Order.p_id==product.p_id,Order.is_delivered==False).first()
