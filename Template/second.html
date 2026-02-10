@@ -61,6 +61,7 @@
                                 </form>
 
                                 <form action="/orders/cancel/{{ res.o_id }}" method="post">
+                                    <input type="hidden" name="csrf_token" value="{{ request.cookies.csrf_token }}">
                                     <button type="submit" class="cancel-btn">❌ Cancel</button>
                                 </form>
                                 {% else %}
