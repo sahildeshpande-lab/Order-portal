@@ -73,9 +73,13 @@
 
                             <td>
                                 <button class="delivery-status {{ 'delivered' if res.is_delivered else 'pending' }}"
+                                    {% if res.is_delivered %} 
+                                        disabled 
+                                    {% endif %}
                                     onclick="updateDelivery(this, '{{ res.p_id }}')">
                                     {{ 'Delivered' if res.is_delivered else 'Pending' }}
                                 </button>
+
                             </td>
 
                         </tr>
@@ -98,16 +102,27 @@
         }
 
         function updateDelivery(btn, productId) {
+            if (btn.classList.contains('delivered')){
+                return ;
+            }
             fetch(`/updatedeliver/${productId}`, { method: 'PUT' })
-                .then(() => {
-                    btn.classList.toggle('delivered');
-                    btn.classList.toggle('pending');
-                    btn.textContent =
-                        btn.classList.contains('delivered') ? 'Delivered' : 'Pending';
+                .then(res => {
+                    if (!res.ok) {
+                        throw new Error("Already delivered");
+                    }
+                    return res.json();
+                }) 
+                .then(data => {
+                    btn.classList.add('delivered');
+                    btn.classList.remove('pending');
+                    btn.textContent = "Delivered";
+                    btn.disabled = true;
+                })
+                .catch(error => {
+                    console.error(error)
                 });
-        }
-
-
+        
+            }
     </script>
 </body>
 

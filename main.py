@@ -446,12 +446,15 @@ def cancel_order(request:Request,o_id: int,current_user: User = Depends(user_aut
 
 @app.put("/updatedeliver/{productid}")
 def update_delivery(request: Request,productid: int,current_user: User = Depends(user_authentication),db: Session = Depends(get_db)):
-    order_update = db.query(Order).filter(Order.p_id == productid,Order.c_id == current_user.id,or_(Order.payment_status == "COD",Order.payment_status == "PAID")).first()
-    
+    order_update = db.query(Order).filter(Order.p_id == productid,Order.c_id == current_user.id,Order.is_delivered == False,or_(Order.payment_status == "COD",Order.payment_status == "PAID")).first()
+     
+    if not order_update :
+        raise HTTPException(status_code=404,detail="Order already delivered ")
     order_update.is_delivered = True
     db.commit()
+    db.refresh(order_update)
 
-    return RedirectResponse(f"/products/get-orders/{current_user.id}",status_code=303)
+    return {"status":"ok", "is_delivered": True }
 
 
 @app.get("/products/get-orders/{user_id}/productmanager",response_model=list[ProductManger],tags=["Product manager endpoint"])
