@@ -298,9 +298,11 @@ def create_order(request:Request,product_id : int =Form(...),quantity:int = Form
         return RedirectResponse(url="/products",status_code=303)
     
     if quantity <= 0 :
+        request.session["error"] = "Quantity cannot be zero"
         return RedirectResponse(url="/products",status_code=303)
 
     if quantity>100 :
+        request.session["error"] = "Out of stock"
         return RedirectResponse(url="/products",status_code=303)
     
     if quantity > product.stock_quantity :
@@ -311,6 +313,7 @@ def create_order(request:Request,product_id : int =Form(...),quantity:int = Form
     product.stock_quantity = product.stock_quantity - quantity 
 
     if product.stock_quantity < 0 :
+        request.session["error"] = "This product is currently out of stock"
         return RedirectResponse(url="/products",status_code=303)
     
     existing_order = db.query(Order).filter(Order.c_id==current_user.id,Order.p_id==product.p_id,Order.is_delivered==False).first()
@@ -325,6 +328,7 @@ def create_order(request:Request,product_id : int =Form(...),quantity:int = Form
 
     db.add(order)
     db.commit()
+    request.session["success"]= "Product added to cart ! "
     return RedirectResponse(url="/",status_code=303)
 
 @app.post("/checkout/start")
@@ -349,7 +353,7 @@ def payment_page(request: Request,current_user: User = Depends(user_authenticati
     if not orders:
         return RedirectResponse("/", status_code=303)
 
-    total_amount = sum(o.total_price for o in orders)
+    total_amount = round(sum(o.total_price for o in orders),3)
 
     intent = stripe.PaymentIntent.create( amount = int(total_amount * 100) , currency="inr", automatic_payment_methods={"enabled":True},metadata={"user_id":current_user.id})
 
@@ -364,7 +368,7 @@ def process_payment(request: Request,method: str = Form(...),payment_intent_id: 
     if not orders:
         return RedirectResponse("/", status_code=303)
 
-    total_amount = sum(o.total_price for o in orders)
+    total_amount = round(sum(o.total_price for o in orders),3)
 
     transaction = None
 
