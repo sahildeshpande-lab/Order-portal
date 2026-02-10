@@ -21,4 +21,6 @@ python-jose[cryptography]==3.3.0
 
 httpx==0.26.0
 
+stripe==8.8.0
+
 
