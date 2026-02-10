@@ -57,6 +57,8 @@
 
         #card-section { display: none; }
     </style>
+    <script src="https://js.stripe.com/v3/"></script>
+
 </head>
 
 <body>
@@ -111,37 +113,22 @@
         <label class="ms-2">Card</label>
     </div>
 
-    <div id="card-section">
-        <div class="section-title mt-4">CARD DETAILS</div>
+   <!-- <div id="card-section">
+    <div class="section-title mt-4">CARD DETAILS</div>
+    <div id="card-element" class="form-control p-3"></div>
+    <div id="card-errors" class="text-danger mt-2"></div>
+</div>
 
-        <div class="inputbox">
-            <input type="text" name="card_name">
-            <span>Name on card</span>
-        </div>
+<input type="hidden" name="payment_intent_id" id="payment_intent_id"> -->
 
-        <div class="row">
-            <div class="col-md-6">
-                <div class="inputbox">
-                    <input type="text" name="card_number" pattern="\d{12}">
-                    <span>Card Number (12 digits)</span>
-                </div>
-            </div>
+<div id="card-section">
+    <div class="section-title mt-4">PAY USING UPI / CARD</div>
+    <div id="payment-element"></div>
+</div>
 
-            <div class="col-md-3">
-                <div class="inputbox">
-                    <input type="month" name="expiry">
-                    <span>Expiry</span>
-                </div>
-            </div>
+<input type="hidden" name="payment_intent_id" id="payment_intent_id">
 
-            <div class="col-md-3">
-                <div class="inputbox">
-                    <input type="password" name="cvv" pattern="\d{3}">
-                    <span>CVV</span>
-                </div>
-            </div>
-        </div>
-    </div>
+
 
     <div class="mt-4">
         <button type="submit" class="pay-btn">Pay ₹{{ total_amount }}</button>
@@ -150,17 +137,62 @@
 </div>
 </form>
 </div>
-
 <script>
 function toggleCard(show) {
     const section = document.getElementById("card-section");
     section.style.display = show ? "block" : "none";
-
-    section.querySelectorAll("input").forEach(i => {
-        i.required = show;
-    });
 }
+
+const stripe = Stripe("{{ stripe_pk }}");
+
+let elements;
+let paymentElement;
+
+function mountStripe() {
+    if (paymentElement) return;
+
+    elements = stripe.elements({ clientSecret: "{{ client_secret }}" });
+    paymentElement = elements.create("payment");
+    paymentElement.mount("#payment-element");
+}
+
+document.querySelectorAll('input[name="method"]').forEach(radio => {
+    radio.addEventListener("change", (e) => {
+        if (e.target.value === "CARD") {
+            toggleCard(true);
+            mountStripe();
+        } else {
+            toggleCard(false);
+        }
+    });
+});
+
+const form = document.querySelector("form");
+
+form.addEventListener("submit", async (e) => {
+    const method = document.querySelector('input[name="method"]:checked').value;
+
+    if (method !== "CARD") return;
+
+    e.preventDefault();
+
+    const { error, paymentIntent } = await stripe.confirmPayment({
+        elements,
+        confirmParams: {
+            return_url: window.location.origin + "/payment"
+        }
+    });
+
+    if (error) {
+        alert(error.message);
+        return;
+    }
+
+    document.getElementById("payment_intent_id").value = paymentIntent.id;
+    form.submit();
+});
 </script>
+
 
 </body>
 </html>

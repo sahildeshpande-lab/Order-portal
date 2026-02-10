@@ -12,12 +12,18 @@ from starlette.middleware.sessions import SessionMiddleware
 from passlib.context import CryptContext 
 import datetime
 import uuid
-from sqlalchemy import func
+from sqlalchemy import func , or_
 from starlette.exceptions import HTTPException as StarletteHTTPException
 import os
 import secrets
 import random
+import stripe 
+from dotenv import load_dotenv
 
+load_dotenv()
+
+
+stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 
 
 app = FastAPI(title="Order portal")
@@ -335,12 +341,14 @@ def payment_page(request: Request,current_user: User = Depends(user_authenticati
 
     total_amount = sum(o.total_price for o in orders)
 
-    response = templates.TemplateResponse("payment.html",{"request": request, "total_amount": total_amount})
+    intent = stripe.PaymentIntent.create( amount = int(total_amount * 100) , currency="inr", automatic_payment_methods={"enabled":True},metadata={"user_id":current_user.id})
+
+    response = templates.TemplateResponse("payment.html",{"request": request, "total_amount": total_amount,"client_secret":intent.client_secret, "stripe_pk": os.getenv("STRIPE_PUBLISHABLE_KEY")})
 
     return no_cache(response)
 
 @app.post("/payment")
-def process_payment(request: Request,method: str = Form(...),current_user: User = Depends(user_authentication),db: Session = Depends(get_db),csrf=Depends(csrf_protect)):
+def process_payment(request: Request,method: str = Form(...),payment_intent_id: str = Form(None),current_user: User = Depends(user_authentication),db: Session = Depends(get_db),csrf=Depends(csrf_protect)):
     orders = (db.query(Order).filter(Order.c_id == current_user.id,Order.payment_status == "pending").all())
 
     if not orders:
@@ -350,28 +358,60 @@ def process_payment(request: Request,method: str = Form(...),current_user: User 
 
     transaction = None
 
-    if method != "COD":
-        transaction = Transactions(created_at=datetime.datetime.now(),mount=total_amount,status="success")
+    if method == "CARD" :
+        intent = stripe.PaymentIntent.retrieve(payment_intent_id)
+
+        if intent.status not in ["succeeded", "processing"]:
+            request.session["error"] = "Payment Failed"
+            return RedirectResponse("/payment",status_code=303)
+        
+        transaction = Transactions ( created_at = datetime.datetime.now(),amount=total_amount,status="success")
+
         db.add(transaction)
         db.commit()
         db.refresh(transaction)
 
-    for order in orders:
-        existing_payment = (db.query(Payment).filter(Payment.o_id == order.o_id).first())
-
-        if existing_payment:
+    for order in orders :
+        if db.query(Payment).filter(Payment.o_id == order.o_id).first():
             continue
-
-        payment = Payment(o_id=order.o_id,t_id=transaction.t_id if transaction else None,amount=order.total_price,method="Cash on Delivery" if method == "COD" else method,status="completed")
+        payment = Payment(o_id =order.o_id,t_id=transaction.t_id if transaction else None, amount = order.total_price, method ="Cash on Delivery" if method == "COD" else "CARD", status="completed")
         db.add(payment)
         order.payment_status = "COD" if method == "COD" else "PAID"
-
     db.commit()
     request.session.pop("can_pay", None)
 
     request.session["success"] = "Order successful! Keep shopping more 🛒"
     return RedirectResponse("/", status_code=303)
 
+@app.post("/stripe/webhook")
+async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
+    payload = await request.body()
+    sig = request.headers.get("stripe-signature")
+
+    try:
+        event = stripe.Webhook.construct_event(payload,sig,os.getenv("STRIPE_WEBHOOK_SECRET"))
+    except Exception:
+        raise HTTPException(status_code=400)
+
+    if event["type"] == "payment_intent.succeeded":
+        intent = event["data"]["object"]
+        user_id = intent.metadata.get("user_id")
+
+        orders = db.query(Order).filter(Order.c_id == int(user_id),Order.payment_status == "pending").all()
+
+        transaction = Transactions(created_at=datetime.datetime.now(),amount=intent.amount / 100,status="success")
+        db.add(transaction)
+        db.commit()
+        db.refresh(transaction)
+
+        for order in orders:
+            payment = Payment(o_id=order.o_id,t_id=transaction.t_id,amount=order.total_price,method="CARD",status="completed")
+            db.add(payment)
+            order.payment_status = "PAID"
+
+        db.commit()
+
+    return {"status": "ok"}
 
 @app.get("/products/get-orders/{user_id}",response_model=List[OrderResponse],tags=["Cart endpoint"])
 def order(request:Request,user_id:int,current_user:User=Depends(user_authentication),db:Session=Depends(get_db)):
@@ -406,7 +446,7 @@ def cancel_order(request:Request,o_id: int,current_user: User = Depends(user_aut
 
 @app.put("/updatedeliver/{productid}")
 def update_delivery(request: Request,productid: int,current_user: User = Depends(user_authentication),db: Session = Depends(get_db)):
-    order_update = (db.query(Order).filter(Order.p_id == productid,Order.c_id == current_user.id,Order.payment_status in ["COD", "PAID"] ).first())
+    order_update = db.query(Order).filter(Order.p_id == productid,Order.c_id == current_user.id,or_(Order.payment_status == "COD",Order.payment_status == "PAID")).first()
     
     order_update.is_delivered = True
     db.commit()
