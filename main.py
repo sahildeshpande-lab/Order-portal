@@ -214,11 +214,6 @@ def register_user(request:Request, email:str=Form(...),password:str=Form(...),db
     response.set_cookie(key="csrf_token",value=csrf_token,httponly=False,samesite="lax",secure=True,path="/")
     return response
 
-@app.get("/products", tags=["Products dashboard endpoint"])
-def products_page(request: Request,current_user: User = Depends(user_authentication),db: Session = Depends(get_db),):
-    products = db.query(Products).all()
-    flash_message = request.session.pop("flash", None)
-    return templates.TemplateResponse("products.html",{"request": request, "products": products, "user_id": current_user.id,"user":current_user,"flash": flash_message})
 
 @app.get("/forget-password",tags=["Forget Password endpoint"])
 def display_forget_password(request:Request):
