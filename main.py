@@ -507,6 +507,10 @@ def updatediscount(request:Request,product_id:int=Form(...), discount:int=Form(.
 @app.post("/add-review",tags=["Review"])
 def add_review(request:Request,product_id:int=Form(...),rating:int=Form(...),comment:str=Form(...),current_user:User=Depends(user_authentication),db:Session=Depends(get_db),csrf=Depends(csrf_protect)):
 
+    if comment is None:
+        return RedirectResponse("/",status_code=303)
+
+
     if rating < 1 or rating > 5 :
         flash(request,"Rating must be between 1 and 5","error")
         return RedirectResponse("/",status_code=303)
