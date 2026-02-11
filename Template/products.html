@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <title>Products Portal</title>
@@ -9,124 +10,127 @@
 
 <body>
 
-<header class="app-header">
-    <h2>Product Page</h2>
+    <header class="app-header">
+        <h2>Product Page</h2>
 
-    {% if user %}
+        {% if user %}
         <a href="/logout" class="logout-btn">Logout</a>
-    {% else %}
+        {% else %}
         <a href="/login" class="logout-btn">Login</a>
-    {% endif %}
-</header>
+        {% endif %}
+    </header>
 
-{% if success %}
-    <div class="message success text-center">
-        {{ success }}
+    {% if flash %}
+<div class="flash-container">
+    <div class="flash-message {{ flash.category }}">
+        <span>{{ flash.message }}</span>
+        <button class="flash-close" onclick="this.parentElement.remove()">×</button>
     </div>
+</div>
 {% endif %}
 
-{% if error %}
-    <div class="message error text-center">
-        {{ error }}
-    </div>
-{% endif %}
 
-{% if products %}
-<section id="productSection" class="products-container" style="display:block;">
-    <div class="products-grid">
 
-        {% for product in products %}
-        <div class="product-col">
+    {% if products %}
+    <section id="productSection" class="products-container" style="display:block;">
+        <div class="products-grid">
 
-            <div class="card">
-                <img src="/{{ product.image }}" class="card-img-top" alt="product">
+            {% for product in products %}
+            <div class="product-col">
 
-                <div class="card-body">
-                    <h6>{{ product.title }}</h6>
-                    <p>{{ product.description }}</p>
+                <div class="card">
+                    <img src="/{{ product.image }}" class="card-img-top" alt="product">
 
-                    <div class="price-row">
-                        <span class="old-price">₹{{ product.price }}</span>
-                        <span class="new-price">
-                            ₹{{ product.price - ((product.price * product.discount) / 100) }}
-                        </span>
-                        <span class="badge">{{ product.discount }}% OFF</span>
+                    <div class="card-body">
+                        <h6>{{ product.title }}</h6>
+                        <p>{{ product.description }}</p>
+
+                        <div class="price-row">
+                            <span class="old-price">₹{{ product.price }}</span>
+                            <span class="new-price">
+                                ₹{{ product.price - ((product.price * product.discount) / 100) }}
+                            </span>
+                            <span class="badge">{{ product.discount }}% OFF</span>
+                        </div>
+                    </div>
+
+                    <div class="card-footer">
+                        <button class="order-btn" data-product-id="{{ product.p_id }}">
+                            🛒 Order Now
+                        </button>
+                        <div class="inputContainer"></div>
                     </div>
                 </div>
 
-                <div class="card-footer">
-                    <button class="order-btn"
-                            data-product-id="{{ product.p_id }}">
-                        🛒 Order Now
-                    </button>
-                    <div class="inputContainer"></div>
-                </div>
             </div>
+            {% endfor %}
 
         </div>
-        {% endfor %}
+    </section>
+    {% endif %}
 
-    </div>
-</section>
-{% endif %}
+    <div class="actions-row">
 
-<div class="actions-row"> 
-
-    <a class="fancy" href="/addproduct"> 
-     <span class="top-key"></span> 
-     <span class="text">Add product</span> 
-     <span class="bottom-key-1"></span> 
-     <span class="bottom-key-2"></span> 
-    </a> 
-    <a class="fancy" href="/updatediscount"> 
-        <span class="top-key"></span> 
-        <span class="text">Update discount</span> 
-        <span class="bottom-key-1"></span> 
-        <span class="bottom-key-2"></span> 
-    </a> 
-    {% if user %} 
-        <a class="fancy" href="/products/get-orders/{{ user.id }}"> 
-            <span class="top-key"></span> 
-            <span class="text">Go to Dashboard</span> 
+        <a class="fancy" href="/addproduct">
+            <span class="top-key"></span>
+            <span class="text">Add product</span>
             <span class="bottom-key-1"></span>
             <span class="bottom-key-2"></span>
-        </a> 
-    {% else %} 
-        <a class="fancy" href="/login"> 
-            <span class="text">Go to Dashboard</span> 
-        </a> 
-    {% endif %} 
-</div>
+        </a>
+        <a class="fancy" href="/updatediscount">
+            <span class="top-key"></span>
+            <span class="text">Update discount</span>
+            <span class="bottom-key-1"></span>
+            <span class="bottom-key-2"></span>
+        </a>
+        {% if user %}
+        <a class="fancy" href="/products/get-orders/{{ user.id }}">
+            <span class="top-key"></span>
+            <span class="text">Go to Dashboard</span>
+            <span class="bottom-key-1"></span>
+            <span class="bottom-key-2"></span>
+        </a>
+        {% else %}
+        <a class="fancy" href="/login">
+            <span class="text">Go to Dashboard</span>
+        </a>
+        {% endif %}
+    </div>
 
-<script>
-document.querySelectorAll(".order-btn").forEach(btn => {
-    btn.addEventListener("click", function () {
+    <script>
+        setTimeout(() => {
+            const alert = document.querySelector('.alert');
+            if (alert) alert.remove();
+        }, 4000);
+        document.querySelectorAll(".order-btn").forEach(btn => {
+            btn.addEventListener("click", function () {
 
-        const container = this.closest(".card")
-            .querySelector(".inputContainer");
-        
-         if (container.innerHTML.trim() !== "") {
-            container.innerHTML = "";
-            this.textContent = "🛒 Order Now";
-            this.classList.remove("active");
-            return;
-        }
+                const container = this.closest(".card")
+                    .querySelector(".inputContainer");
 
-        const productId = this.dataset.productId;
+                if (container.innerHTML.trim() !== "") {
+                    container.innerHTML = "";
+                    this.textContent = "🛒 Order Now";
+                    this.classList.remove("active");
+                    return;
+                }
+
+                const productId = this.dataset.productId;
 
 
-        container.innerHTML = `
+                container.innerHTML = `
             <form method="POST" action="/order" class="order-form">
                 <input type="hidden" name="product_id" value="${productId}">
                 <input type="number" name="quantity" placeholder="Quantity" required>
                 <button type="submit">Confirm Order</button>
             </form>
         `;
-        this.textContent = "✖ Cancel";
-        this.classList.add("active");
-    });
-});
-</script>
+                this.textContent = "✖ Cancel";
+                this.classList.add("active");
+            });
+        });
+    </script>
 
 </body>
+
 </html>

@@ -117,6 +117,10 @@ def get_current_user_optional(request:Request,db:Session):
 def generate_otp()-> str :
     return str(random.randint(100000,999999))
 
+def flash(request: Request, message: str, category: str = "success"):
+    request.session["flash"] = {"message": message,"category": category}
+
+
 @app.exception_handler(HTTPException)
 async def auth_exception_handler(request: Request, exc: HTTPException):
     if exc.status_code == 401 and request.headers.get("accept", "").startswith("text/html"):
@@ -132,7 +136,6 @@ async def not_found_handler(request: Request, exc: StarletteHTTPException):
 @app.middleware("http")
 async def ensure_csrf_cookie(request: Request, call_next):
     response = await call_next(request)
-
     if "csrf_token" not in request.cookies:
         csrf_token = generate_csrf_token()
         response.set_cookie(key="csrf_token",value=csrf_token,httponly=False,samesite="lax",secure=True)
@@ -142,10 +145,9 @@ async def ensure_csrf_cookie(request: Request, call_next):
 @app.get("/")
 def products_home(request:Request,db:Session=Depends(get_db)):
     products = db.query(Products).all()
-
     user = get_current_user_optional(request,db)
-
-    return templates.TemplateResponse("products.html",{"request":request,"products":products,"user":user, "user_id": user.id if user else None})
+    flash_message=request.session.pop("flash",None)
+    return templates.TemplateResponse("products.html",{"request":request,"products":products,"user":user, "user_id": user.id if user else None,"flash":flash_message})
 
 @app.get("/login")
 def login_page(request: Request, db: Session = Depends(get_db)):
@@ -172,9 +174,7 @@ def login_form(request: Request,email: str = Form(...),password: str = Form(...)
     csrf_token = generate_csrf_token()
 
     response = RedirectResponse("/",status_code=303)
-
     response.set_cookie(key="access_token",value=access_token,httponly=True,samesite="lax",secure=True,path="/")
-
     response.set_cookie(key="csrf_token",value=csrf_token,httponly=False,samesite="lax",secure=True,path="/")
     return response
 
@@ -214,7 +214,8 @@ def register_user(request:Request, email:str=Form(...),password:str=Form(...),db
 @app.get("/products", tags=["Products dashboard endpoint"])
 def products_page(request: Request,current_user: User = Depends(user_authentication),db: Session = Depends(get_db),):
     products = db.query(Products).all()
-    return templates.TemplateResponse("products.html",{"request": request, "products": products, "user_id": current_user.id,"user":current_user})
+    flash_message = request.session.pop("flash", None)
+    return templates.TemplateResponse("products.html",{"request": request, "products": products, "user_id": current_user.id,"user":current_user,"flash": flash_message})
 
 @app.get("/forget-password",tags=["Forget Password endpoint"])
 def display_forget_password(request:Request):
@@ -284,12 +285,10 @@ def addproduct(request: Request,title: Optional[str] = Form(None),description: O
     db.add(new_product)
     db.commit()
     db.refresh(new_product)
+    flash(request, "Product added successfully", "success")
 
-    products = db.query(Products).all()
-    message = "Product added successfully"
-
-    return templates.TemplateResponse("products.html",{"request": request, "products": products, "message": message})
-
+    return RedirectResponse("/products", status_code=303)
+    
 @app.post("/order",tags=["Order product endpoint"])
 def create_order(request:Request,product_id : int =Form(...),quantity:int = Form(...),current_user: User = Depends(user_authentication),db:Session=Depends(get_db)):
     
@@ -298,22 +297,22 @@ def create_order(request:Request,product_id : int =Form(...),quantity:int = Form
         return RedirectResponse(url="/products",status_code=303)
     
     if quantity <= 0 :
-        request.session["error"] = "Quantity cannot be zero"
+        flash(request, "Select valid quantity range", "error")
         return RedirectResponse(url="/products",status_code=303)
 
     if quantity>100 :
-        request.session["error"] = "Out of stock"
+        flash(request, "Out of stock", "error")
         return RedirectResponse(url="/products",status_code=303)
     
     if quantity > product.stock_quantity :
-        request.session["error"] = "Thanks for adding the product , but we don't have stock right now . Stay tunned we will update it !! "
+        flash(request, "Thanks for adding the product , but we don't have stock right now . Stay tunned we will update it !", "error")
         return RedirectResponse(url="/products",status_code=303)
     
     
     product.stock_quantity = product.stock_quantity - quantity 
 
     if product.stock_quantity < 0 :
-        request.session["error"] = "This product is currently out of stock"
+        flash(request, "This product is currently out of stock", "error")
         return RedirectResponse(url="/products",status_code=303)
     
     existing_order = db.query(Order).filter(Order.c_id==current_user.id,Order.p_id==product.p_id,Order.is_delivered==False).first()
@@ -328,7 +327,8 @@ def create_order(request:Request,product_id : int =Form(...),quantity:int = Form
 
     db.add(order)
     db.commit()
-    request.session["success"]= "Product added to cart ! "
+    flash(request, "Product added to cart successfully ", "success")
+
     return RedirectResponse(url="/",status_code=303)
 
 @app.post("/checkout/start")
@@ -342,92 +342,7 @@ def start_checkout(request: Request,current_user: User = Depends(user_authentica
 
     return RedirectResponse("/payment", status_code=303)
 
-# @app.get("/payment")
-# def payment_page(request: Request,current_user: User = Depends(user_authentication),db: Session = Depends(get_db)):
-
-#     if not request.session.get("can_pay"):
-#         return RedirectResponse("/", status_code=303)
-
-#     orders = db.query(Order).filter(Order.c_id == current_user.id,Order.payment_status == "pending").all()
-
-#     if not orders:
-#         return RedirectResponse("/", status_code=303)
-
-#     total_amount = round(sum(o.total_price for o in orders),3)
-
-#     intent = stripe.PaymentIntent.create( amount = int(total_amount * 100) , currency="inr", automatic_payment_methods={"enabled":True},metadata={"user_id":current_user.id})
-
-#     response = templates.TemplateResponse("payment.html",{"request": request, "total_amount": total_amount,"client_secret":intent.client_secret, "stripe_pk": os.getenv("STRIPE_PUBLISHABLE_KEY")})
-
-#     return no_cache(response)
-
-# @app.post("/payment")
-# def process_payment(request: Request,method: str = Form(...),payment_intent_id: str = Form(None),current_user: User = Depends(user_authentication),db: Session = Depends(get_db),csrf=Depends(csrf_protect)):
-#     orders = (db.query(Order).filter(Order.c_id == current_user.id,Order.payment_status == "pending").all())
-
-#     if not orders:
-#         return RedirectResponse("/", status_code=303)
-
-#     total_amount = round(sum(o.total_price for o in orders),3)
-
-#     transaction = None
-
-#     if method == "CARD" :
-#         intent = stripe.PaymentIntent.retrieve(payment_intent_id)
-
-#         if intent.status not in ["succeeded", "processing"]:
-#             request.session["error"] = "Payment Failed"
-#             return RedirectResponse("/payment",status_code=303)
-        
-#         transaction = Transactions ( created_at = datetime.datetime.now(),amount=total_amount,status="success")
-
-#         db.add(transaction)
-#         db.commit()
-#         db.refresh(transaction)
-
-#     for order in orders :
-#         if db.query(Payment).filter(Payment.o_id == order.o_id).first():
-#             continue
-#         payment = Payment(o_id =order.o_id,t_id=transaction.t_id if transaction else None, amount = order.total_price, method ="Cash on Delivery" if method == "COD" else "CARD", status="completed")
-#         db.add(payment)
-#         order.payment_status = "COD" if method == "COD" else "PAID"
-#     db.commit()
-#     request.session.pop("can_pay", None)
-
-#     request.session["success"] = "Order successful! Keep shopping more 🛒"
-#     return RedirectResponse("/", status_code=303)
-
-# @app.post("/stripe/webhook")
-# async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
-#     payload = await request.body()
-#     sig = request.headers.get("stripe-signature")
-
-#     try:
-#         event = stripe.Webhook.construct_event(payload,sig,os.getenv("STRIPE_WEBHOOK_SECRET"))
-#     except Exception:
-#         raise HTTPException(status_code=400)
-
-#     if event["type"] == "payment_intent.succeeded":
-#         intent = event["data"]["object"]
-#         user_id = intent.metadata.get("user_id")
-
-#         orders = db.query(Order).filter(Order.c_id == int(user_id),Order.payment_status == "pending").all()
-
-#         transaction = Transactions(created_at=datetime.datetime.now(),amount=intent.amount / 100,status="success")
-#         db.add(transaction)
-#         db.commit()
-#         db.refresh(transaction)
-
-#         for order in orders:
-#             payment = Payment(o_id=order.o_id,t_id=transaction.t_id,amount=order.total_price,method="CARD",status="completed")
-#             db.add(payment)
-#             order.payment_status = "PAID"
-
-#         db.commit()
-
-#     return {"status": "ok"}
-
-@app.get("/payment")
+@app.get("/payment",tags=["Payments"])
 def payment_page(request: Request,current_user: User = Depends(user_authentication),db: Session = Depends(get_db)):
     if not request.session.get("can_pay"):
         return RedirectResponse("/", status_code=303)
@@ -445,7 +360,7 @@ def payment_page(request: Request,current_user: User = Depends(user_authenticati
 
     return no_cache(response)
 
-@app.post("/payment")
+@app.post("/payment",tags=["Payment"])
 def process_payment(request: Request,method: str = Form(...),payment_intent_id: str = Form(None),current_user: User = Depends(user_authentication),db: Session = Depends(get_db),csrf=Depends(csrf_protect)):
     orders = db.query(Order).filter(Order.c_id == current_user.id,Order.payment_status == "pending").all()
 
@@ -463,8 +378,11 @@ def process_payment(request: Request,method: str = Form(...),payment_intent_id: 
     
     intent = stripe.PaymentIntent.retrieve(payment_intent_id)
 
+    if intent.metadata.get("user_id") != str(current_user.id):
+        raise HTTPException(status_code=403, detail="Invalid payment session")
+
     if intent.status != "succeeded":
-        request.session["error"] = "Payment failed!"
+        flash(request, "Payment failed!", "error")
         return RedirectResponse("/payment", status_code=303)
     
     existing = db.query(Transactions).filter(Transactions.stripe_intent_id == payment_intent_id).first()
@@ -483,7 +401,7 @@ def process_payment(request: Request,method: str = Form(...),payment_intent_id: 
 
     db.commit()
     request.session.pop("can_pay", None)
-
+    flash(request, "Payment successful , Order confirmed!", "success")
     return RedirectResponse("/", status_code=303)
 
 @app.get("/products/get-orders/{user_id}",response_model=List[OrderResponse],tags=["Cart endpoint"])
@@ -498,7 +416,9 @@ def order(request:Request,user_id:int,current_user:User=Depends(user_authenticat
     for o,p in orders :
        response.append(OrderResponse(o_id = o.o_id,p_id=p.p_id,title=p.title,description=p.description,total_price=o.total_price,quantity=o.quantity,is_delivered=o.is_delivered,payment_status=None if o.payment_status == "pending" else o.payment_status))
     
-    response= templates.TemplateResponse("second.html",{"request":request,"response":response,"order":orders,"user_id":user_id})
+    flash_message = request.session.pop("flash", None)
+
+    response= templates.TemplateResponse("second.html",{"request":request,"response":response,"order":orders,"user_id":user_id,"flash": flash_message})
     return no_cache(response)
 
 @app.post("/orders/cancel/{o_id}", tags=["Cancel order"])
@@ -506,15 +426,14 @@ def cancel_order(request:Request,o_id: int,current_user: User = Depends(user_aut
     order = (db.query(Order).filter(Order.o_id == o_id, Order.c_id == current_user.id,Order.payment_status == "pending").first())
 
     if not order:
-        message="Order not found"
-        request.session["error"]=message
+        flash(request, "Order not found", "error")
         return RedirectResponse(f"/products/get-orders/{current_user.id}",status_code=303)
         
 
     db.delete(order)
     db.commit()
-    message="Order removed successfully"
-    request.session["success"]=message
+    flash(request, "Order removed successfully", "success")
+
     return RedirectResponse(f"/products/get-orders/{current_user.id}",status_code=303)
 
 @app.put("/updatedeliver/{productid}")
@@ -540,7 +459,8 @@ def product_manager(request:Request,user_id:int,current_user:User = Depends(user
     response=[]
     for o,p in pro :
         response.append(ProductManger(p_id=p.p_id,title=p.title,price=p.price,quantity=o.quantity,discount=p.discount,total_price=o.total_price))
-    response= templates.TemplateResponse("product_manager.html",{"request":request,"user_id":current_user.id,"pro":response})
+    flash_message = request.session.pop("flash", None)
+    response= templates.TemplateResponse("product_manager.html",{"request":request,"user_id":current_user.id,"pro":response,"flash": flash_message})
     return no_cache(response)
    
 
@@ -553,8 +473,8 @@ def get_category(request:Request,user_id:int,current_user=Depends(user_authentic
     response=[]
     for o,p in product_category:
         response.append(ProductCategory(title=p.title,category=p.category,discount=p.discount,total_price=o.total_price))
-
-    response= templates.TemplateResponse("category.html",{"request":request,"user_id":current_user.id,"response":response})
+    flash_message = request.session.pop("flash", None)
+    response= templates.TemplateResponse("category.html",{"request":request,"user_id":current_user.id,"response":response,"flash": flash_message})
     return no_cache(response)
 
 @app.get("/updatediscount" , tags=["update discount endpoint"])
@@ -577,8 +497,7 @@ def updatediscount(request:Request,product_id:int=Form(...), discount:int=Form(.
 
     db.commit()
     db.refresh(exisiting)   
-
-    request.session["success"] = "Discount updated successfully"
+    flash(request, "Discount updated successfully", "success")
     return RedirectResponse(url="/products",status_code=303)
 
 
