@@ -168,7 +168,6 @@ document.querySelectorAll('input[name="method"]').forEach(radio => {
 });
 
 const form = document.querySelector("form");
-
 form.addEventListener("submit", async (e) => {
     const method = document.querySelector('input[name="method"]:checked').value;
 
@@ -176,21 +175,20 @@ form.addEventListener("submit", async (e) => {
 
     e.preventDefault();
 
-    const { error, paymentIntent } = await stripe.confirmPayment({
-        elements,
-        confirmParams: {
-            return_url: window.location.origin + "/payment"
-        }
-    });
+    const { error } = await stripe.confirmPayment({elements,redirect: "if_required"});
 
     if (error) {
         alert(error.message);
         return;
     }
+    const { paymentIntent } = await stripe.retrievePaymentIntent("{{ client_secret }}");
 
-    document.getElementById("payment_intent_id").value = paymentIntent.id;
-    form.submit();
+    if (paymentIntent.status === "succeeded") {
+        document.getElementById("payment_intent_id").value = paymentIntent.id;
+        form.submit();
+    }
 });
+
 </script>
 
 

@@ -342,9 +342,93 @@ def start_checkout(request: Request,current_user: User = Depends(user_authentica
 
     return RedirectResponse("/payment", status_code=303)
 
+# @app.get("/payment")
+# def payment_page(request: Request,current_user: User = Depends(user_authentication),db: Session = Depends(get_db)):
+
+#     if not request.session.get("can_pay"):
+#         return RedirectResponse("/", status_code=303)
+
+#     orders = db.query(Order).filter(Order.c_id == current_user.id,Order.payment_status == "pending").all()
+
+#     if not orders:
+#         return RedirectResponse("/", status_code=303)
+
+#     total_amount = round(sum(o.total_price for o in orders),3)
+
+#     intent = stripe.PaymentIntent.create( amount = int(total_amount * 100) , currency="inr", automatic_payment_methods={"enabled":True},metadata={"user_id":current_user.id})
+
+#     response = templates.TemplateResponse("payment.html",{"request": request, "total_amount": total_amount,"client_secret":intent.client_secret, "stripe_pk": os.getenv("STRIPE_PUBLISHABLE_KEY")})
+
+#     return no_cache(response)
+
+# @app.post("/payment")
+# def process_payment(request: Request,method: str = Form(...),payment_intent_id: str = Form(None),current_user: User = Depends(user_authentication),db: Session = Depends(get_db),csrf=Depends(csrf_protect)):
+#     orders = (db.query(Order).filter(Order.c_id == current_user.id,Order.payment_status == "pending").all())
+
+#     if not orders:
+#         return RedirectResponse("/", status_code=303)
+
+#     total_amount = round(sum(o.total_price for o in orders),3)
+
+#     transaction = None
+
+#     if method == "CARD" :
+#         intent = stripe.PaymentIntent.retrieve(payment_intent_id)
+
+#         if intent.status not in ["succeeded", "processing"]:
+#             request.session["error"] = "Payment Failed"
+#             return RedirectResponse("/payment",status_code=303)
+        
+#         transaction = Transactions ( created_at = datetime.datetime.now(),amount=total_amount,status="success")
+
+#         db.add(transaction)
+#         db.commit()
+#         db.refresh(transaction)
+
+#     for order in orders :
+#         if db.query(Payment).filter(Payment.o_id == order.o_id).first():
+#             continue
+#         payment = Payment(o_id =order.o_id,t_id=transaction.t_id if transaction else None, amount = order.total_price, method ="Cash on Delivery" if method == "COD" else "CARD", status="completed")
+#         db.add(payment)
+#         order.payment_status = "COD" if method == "COD" else "PAID"
+#     db.commit()
+#     request.session.pop("can_pay", None)
+
+#     request.session["success"] = "Order successful! Keep shopping more 🛒"
+#     return RedirectResponse("/", status_code=303)
+
+# @app.post("/stripe/webhook")
+# async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
+#     payload = await request.body()
+#     sig = request.headers.get("stripe-signature")
+
+#     try:
+#         event = stripe.Webhook.construct_event(payload,sig,os.getenv("STRIPE_WEBHOOK_SECRET"))
+#     except Exception:
+#         raise HTTPException(status_code=400)
+
+#     if event["type"] == "payment_intent.succeeded":
+#         intent = event["data"]["object"]
+#         user_id = intent.metadata.get("user_id")
+
+#         orders = db.query(Order).filter(Order.c_id == int(user_id),Order.payment_status == "pending").all()
+
+#         transaction = Transactions(created_at=datetime.datetime.now(),amount=intent.amount / 100,status="success")
+#         db.add(transaction)
+#         db.commit()
+#         db.refresh(transaction)
+
+#         for order in orders:
+#             payment = Payment(o_id=order.o_id,t_id=transaction.t_id,amount=order.total_price,method="CARD",status="completed")
+#             db.add(payment)
+#             order.payment_status = "PAID"
+
+#         db.commit()
+
+#     return {"status": "ok"}
+
 @app.get("/payment")
 def payment_page(request: Request,current_user: User = Depends(user_authentication),db: Session = Depends(get_db)):
-
     if not request.session.get("can_pay"):
         return RedirectResponse("/", status_code=303)
 
@@ -353,79 +437,74 @@ def payment_page(request: Request,current_user: User = Depends(user_authenticati
     if not orders:
         return RedirectResponse("/", status_code=303)
 
-    total_amount = round(sum(o.total_price for o in orders),3)
+    total_amount = round(sum(o.total_price for o in orders), 2)
 
-    intent = stripe.PaymentIntent.create( amount = int(total_amount * 100) , currency="inr", automatic_payment_methods={"enabled":True},metadata={"user_id":current_user.id})
+    intent = stripe.PaymentIntent.create(amount=int(total_amount * 100),currency="inr",automatic_payment_methods={"enabled": True},metadata={"user_id": current_user.id})
 
-    response = templates.TemplateResponse("payment.html",{"request": request, "total_amount": total_amount,"client_secret":intent.client_secret, "stripe_pk": os.getenv("STRIPE_PUBLISHABLE_KEY")})
+    response = templates.TemplateResponse("payment.html",{"request": request,"total_amount": total_amount,"client_secret": intent.client_secret,"stripe_pk": os.getenv("STRIPE_PUBLISHABLE_KEY")})
 
     return no_cache(response)
 
+# @app.post("/payment")
+# def process_payment(request: Request,method: str = Form(...),current_user: User = Depends(user_authentication),db: Session = Depends(get_db),csrf=Depends(csrf_protect)):
+#     orders = db.query(Order).filter(Order.c_id == current_user.id,Order.payment_status == "pending").all()
+
+#     if not orders:
+#         return RedirectResponse("/", status_code=303)
+
+#     if method == "COD":
+#         for order in orders:
+#             payment = Payment(o_id=order.o_id,t_id=None,amount=order.total_price ,method="Cash on Delivery", status="completed")
+#             db.add(payment)
+#             order.payment_status = "COD"
+
+#         db.commit()
+#         request.session.pop("can_pay", None)
+#         request.session["success"] = "Order placed successfully!"
+#         return RedirectResponse("/", status_code=303)
+#     request.session["info"] = "Payment processing. Please wait."
+#     return RedirectResponse("/payment/complete", status_code=303)
+
 @app.post("/payment")
 def process_payment(request: Request,method: str = Form(...),payment_intent_id: str = Form(None),current_user: User = Depends(user_authentication),db: Session = Depends(get_db),csrf=Depends(csrf_protect)):
-    orders = (db.query(Order).filter(Order.c_id == current_user.id,Order.payment_status == "pending").all())
+    orders = db.query(Order).filter(Order.c_id == current_user.id,Order.payment_status == "pending").all()
 
     if not orders:
         return RedirectResponse("/", status_code=303)
 
-    total_amount = round(sum(o.total_price for o in orders),3)
+    if method == "COD":
+        for order in orders:
+            db.add(Payment( o_id=order.o_id, amount=order.total_price, method="COD", status="completed"))
+            order.payment_status = "COD"
 
-    transaction = None
-
-    if method == "CARD" :
-        intent = stripe.PaymentIntent.retrieve(payment_intent_id)
-
-        if intent.status not in ["succeeded", "processing"]:
-            request.session["error"] = "Payment Failed"
-            return RedirectResponse("/payment",status_code=303)
-        
-        transaction = Transactions ( created_at = datetime.datetime.now(),amount=total_amount,status="success")
-
-        db.add(transaction)
         db.commit()
-        db.refresh(transaction)
+        request.session.pop("can_pay", None)
+        return RedirectResponse("/", status_code=303)
+    
+    intent = stripe.PaymentIntent.retrieve(payment_intent_id)
 
-    for order in orders :
-        if db.query(Payment).filter(Payment.o_id == order.o_id).first():
-            continue
-        payment = Payment(o_id =order.o_id,t_id=transaction.t_id if transaction else None, amount = order.total_price, method ="Cash on Delivery" if method == "COD" else "CARD", status="completed")
-        db.add(payment)
-        order.payment_status = "COD" if method == "COD" else "PAID"
+    if intent.status != "succeeded":
+        request.session["error"] = "Payment failed!"
+        return RedirectResponse("/payment", status_code=303)
+    
+    existing = db.query(Transactions).filter(Transactions.stripe_intent_id == payment_intent_id).first()
+
+    if existing:
+        return RedirectResponse("/", status_code=303)
+
+    transaction = Transactions(stripe_intent_id=payment_intent_id, amount=intent.amount / 100,status="success")
+    db.add(transaction)
+    db.commit()
+    db.refresh(transaction)
+
+    for order in orders:
+        db.add(Payment(o_id=order.o_id,t_id=transaction.t_id,amount=order.total_price,method="CARD",status="completed"))
+        order.payment_status = "PAID"
+
     db.commit()
     request.session.pop("can_pay", None)
 
-    request.session["success"] = "Order successful! Keep shopping more 🛒"
     return RedirectResponse("/", status_code=303)
-
-@app.post("/stripe/webhook")
-async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
-    payload = await request.body()
-    sig = request.headers.get("stripe-signature")
-
-    try:
-        event = stripe.Webhook.construct_event(payload,sig,os.getenv("STRIPE_WEBHOOK_SECRET"))
-    except Exception:
-        raise HTTPException(status_code=400)
-
-    if event["type"] == "payment_intent.succeeded":
-        intent = event["data"]["object"]
-        user_id = intent.metadata.get("user_id")
-
-        orders = db.query(Order).filter(Order.c_id == int(user_id),Order.payment_status == "pending").all()
-
-        transaction = Transactions(created_at=datetime.datetime.now(),amount=intent.amount / 100,status="success")
-        db.add(transaction)
-        db.commit()
-        db.refresh(transaction)
-
-        for order in orders:
-            payment = Payment(o_id=order.o_id,t_id=transaction.t_id,amount=order.total_price,method="CARD",status="completed")
-            db.add(payment)
-            order.payment_status = "PAID"
-
-        db.commit()
-
-    return {"status": "ok"}
 
 @app.get("/products/get-orders/{user_id}",response_model=List[OrderResponse],tags=["Cart endpoint"])
 def order(request:Request,user_id:int,current_user:User=Depends(user_authentication),db:Session=Depends(get_db)):

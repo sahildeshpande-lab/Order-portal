@@ -3,7 +3,7 @@ import sqlite3
 conn=sqlite3.connect("test.db")
 cursor=conn.cursor()
 
-cursor.execute("Alter table products add column stock_quantity INTEGER DEFAULT 100")
+cursor.execute("Alter table transactions add column stripe_intent_id VARCHAR(100) ")
 
 print("Done successfully")
 

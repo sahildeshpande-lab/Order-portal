@@ -42,6 +42,7 @@ class Order(Base):
 class Transactions(Base):
     __tablename__="transactions"
     t_id=Column(Integer,primary_key=True,index=True)
+    stripe_intent_id = Column(String, unique=True, nullable=False)
     created_at=Column(DateTime,server_default=func.now(),nullable=False)
     amount=Column(Integer,nullable=False)
     status=Column(String,nullable=False)
