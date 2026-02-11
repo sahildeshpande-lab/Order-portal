@@ -445,26 +445,6 @@ def payment_page(request: Request,current_user: User = Depends(user_authenticati
 
     return no_cache(response)
 
-# @app.post("/payment")
-# def process_payment(request: Request,method: str = Form(...),current_user: User = Depends(user_authentication),db: Session = Depends(get_db),csrf=Depends(csrf_protect)):
-#     orders = db.query(Order).filter(Order.c_id == current_user.id,Order.payment_status == "pending").all()
-
-#     if not orders:
-#         return RedirectResponse("/", status_code=303)
-
-#     if method == "COD":
-#         for order in orders:
-#             payment = Payment(o_id=order.o_id,t_id=None,amount=order.total_price ,method="Cash on Delivery", status="completed")
-#             db.add(payment)
-#             order.payment_status = "COD"
-
-#         db.commit()
-#         request.session.pop("can_pay", None)
-#         request.session["success"] = "Order placed successfully!"
-#         return RedirectResponse("/", status_code=303)
-#     request.session["info"] = "Payment processing. Please wait."
-#     return RedirectResponse("/payment/complete", status_code=303)
-
 @app.post("/payment")
 def process_payment(request: Request,method: str = Form(...),payment_intent_id: str = Form(None),current_user: User = Depends(user_authentication),db: Session = Depends(get_db),csrf=Depends(csrf_protect)):
     orders = db.query(Order).filter(Order.c_id == current_user.id,Order.payment_status == "pending").all()
