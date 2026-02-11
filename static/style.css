@@ -342,6 +342,70 @@ body {
     font-size: 18px;
     cursor: pointer;
 }
+   .review-summary {
+    margin-top: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #444;
+}
+
+.review-toggle-btn {
+    margin-top: 10px;
+    padding: 6px 10px;
+    font-size: 13px;
+    border: none;
+    border-radius: 6px;
+    background: #f1f1f1;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.review-toggle-btn:hover {
+    background: #e0e0e0;
+}
+
+.review-toggle-btn.active {
+    background: #ffdddd;
+}
+.reviewContainer {
+    margin-top: 10px;
+    padding: 10px;
+    border-radius: 8px;
+    background: #fafafa;
+    border: 1px solid #eee;
+}
+.review-form select,
+.review-form textarea {
+    width: 100%;
+    margin-top: 6px;
+    padding: 6px;
+    border-radius: 6px;
+    border: 1px solid #ddd;
+    font-family: 'Poppins', sans-serif;
+    font-size: 13px;
+}
+
+.review-form textarea {
+    resize: none;
+}
+
+.review-form button {
+    margin-top: 8px;
+    padding: 6px 10px;
+    border: none;
+    border-radius: 6px;
+    background: #4CAF50;
+    color: white;
+    font-size: 13px;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.review-form button:hover {
+    background: #45a049;
+}
+
+
 
 @keyframes slideIn {
     from {

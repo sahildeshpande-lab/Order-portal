@@ -21,13 +21,13 @@
     </header>
 
     {% if flash %}
-<div class="flash-container">
-    <div class="flash-message {{ flash.category }}">
-        <span>{{ flash.message }}</span>
-        <button class="flash-close" onclick="this.parentElement.remove()">×</button>
+    <div class="flash-container">
+        <div class="flash-message {{ flash.category }}">
+            <span>{{ flash.message }}</span>
+            <button class="flash-close" onclick="this.parentElement.remove()">×</button>
+        </div>
     </div>
-</div>
-{% endif %}
+    {% endif %}
 
 
 
@@ -52,6 +52,44 @@
                             </span>
                             <span class="badge">{{ product.discount }}% OFF</span>
                         </div>
+
+                        <!-- ⭐ Review Summary -->
+                        <div class="review-summary">
+                            {% if review_map.get(product.p_id) %}
+                            ⭐ {{ review_map[product.p_id].avg }}
+                            ({{ review_map[product.p_id].count }} reviews)
+                            {% else %}
+                            No reviews yet
+                            {% endif %}
+                        </div>
+
+                        {% if user %}
+                        <button class="review-toggle-btn" data-product-id="{{ product.p_id }}">
+                            ✍ Write Review
+                        </button>
+                        <div class="reviewContainer" id="review-{{ product.p_id }}" style="display:none;">
+
+                            <form method="post" action="/add-review" class="review-form">
+                                <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token') }}">
+                                <input type="hidden" name="product_id" value="{{ product.p_id }}">
+
+                                <select name="rating" required>
+                                    <option value="">Rate</option>
+                                    <option value="1">1 ⭐</option>
+                                    <option value="2">2 ⭐</option>
+                                    <option value="3">3 ⭐</option>
+                                    <option value="4">4 ⭐</option>
+                                    <option value="5">5 ⭐</option>
+                                </select>
+
+                                <textarea name="comment" placeholder="Write review..." rows="2"></textarea>
+
+                                <button type="submit">Submit</button>
+                            </form>
+
+                        </div>
+                        {% endif %}
+
                     </div>
 
                     <div class="card-footer">
@@ -102,6 +140,25 @@
             const alert = document.querySelector('.alert');
             if (alert) alert.remove();
         }, 4000);
+
+        document.querySelectorAll(".review-toggle-btn").forEach(btn => {
+            btn.addEventListener("click", function () {
+
+                const productId = this.dataset.productId;
+                const container = document.getElementById("review-" + productId);
+
+                if (container.style.display === "none") {
+                    container.style.display = "block";
+                    this.textContent = "✖ Cancel Review";
+                    this.classList.add("active");
+                } else {
+                    container.style.display = "none";
+                    this.textContent = "✍ Write Review";
+                    this.classList.remove("active");
+                }
+            });
+        });
+
         document.querySelectorAll(".order-btn").forEach(btn => {
             btn.addEventListener("click", function () {
 

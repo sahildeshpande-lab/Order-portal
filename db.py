@@ -1,8 +1,9 @@
-from sqlalchemy import Column, Integer, String, create_engine , ForeignKey , Boolean ,DateTime
+from sqlalchemy import Column, Integer, Text ,String, create_engine , ForeignKey , Boolean ,DateTime
 from sqlalchemy.orm import sessionmaker, declarative_base , relationship
 from pydantic import BaseModel , EmailStr 
 from typing import Optional
 from sqlalchemy.sql import func
+import datetime
 
 DATABASE_URL = "sqlite:///./test.db"
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
@@ -57,7 +58,18 @@ class Payment(Base):
     status=Column(String,nullable=False)
     order = relationship("Order", back_populates="payment")
 
+class Review(Base):
+    __tablename__="reviews"
 
+    r_id = Column(Integer,primary_key=True,index=True)
+    user_id = Column(Integer,ForeignKey("users.id"),nullable=False)
+    product_id = Column(Integer,ForeignKey("products.p_id"),nullable=False)
+    rating=Column(Integer,nullable=False)
+    comment=Column(Text,nullable=True)
+    created_at=Column(DateTime,default=datetime.datetime.now())
+
+    user=relationship("User")
+    product = relationship("Products")
 
 class EmailCheck(BaseModel):
     email:EmailStr 
@@ -123,6 +135,14 @@ class UpdateDelivery(BaseModel):
     class Config :
         from_attributes=True
 
+class ReviewResponse(BaseModel):
+    user_email:str
+    rating:int
+    comment:Optional[str]
+    created_at : datetime.datetime
+
+    class Config :
+        orm_mode = True 
 
 Base.metadata.create_all(bind=engine)
 

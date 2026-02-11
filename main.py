@@ -6,7 +6,7 @@ from sqlalchemy.orm import  Session
 from pydantic import  ValidationError
 from typing import List ,Optional
 from jose import jwt , JWTError
-from db import User , Products ,Order ,Transactions ,Payment,EmailCheck  , OrderResponse ,ProductManger , ProductCategory  , get_db ,ProductResponse
+from db import User , Products ,Order ,Transactions ,Payment,EmailCheck  , OrderResponse ,ProductManger , ProductCategory  , get_db ,ProductResponse , Review
 import shutil 
 from starlette.middleware.sessions import SessionMiddleware
 from passlib.context import CryptContext 
@@ -95,8 +95,9 @@ def user_authentication(request:Request,db:Session=Depends(get_db))-> User:
     return user
 
 def no_cache(response):
-    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate ,max-age=0"
     response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
     return response
 
 
@@ -146,8 +147,10 @@ async def ensure_csrf_cookie(request: Request, call_next):
 def products_home(request:Request,db:Session=Depends(get_db)):
     products = db.query(Products).all()
     user = get_current_user_optional(request,db)
+    reviews=db.query(Review.product_id,func.avg(Review.rating).label("avg_rating"),func.count(Review.r_id).label("review_count")).group_by(Review.product_id).all()
+    review_map={r.product_id : {"avg":round(r.avg_rating,1),"count":r.review_count} for r in reviews}
     flash_message=request.session.pop("flash",None)
-    return templates.TemplateResponse("products.html",{"request":request,"products":products,"user":user, "user_id": user.id if user else None,"flash":flash_message})
+    return templates.TemplateResponse("products.html",{"request":request,"products":products,"user":user, "user_id": user.id if user else None,"flash":flash_message,"review_map":review_map})
 
 @app.get("/login")
 def login_page(request: Request, db: Session = Depends(get_db)):
@@ -382,6 +385,7 @@ def process_payment(request: Request,method: str = Form(...),payment_intent_id: 
         raise HTTPException(status_code=403, detail="Invalid payment session")
 
     if intent.status != "succeeded":
+        request.session.pop("can_pay",None)
         flash(request, "Payment failed!", "error")
         return RedirectResponse("/payment", status_code=303)
     
@@ -500,6 +504,30 @@ def updatediscount(request:Request,product_id:int=Form(...), discount:int=Form(.
     flash(request, "Discount updated successfully", "success")
     return RedirectResponse(url="/products",status_code=303)
 
+@app.post("/add-review",tags=["Review"])
+def add_review(request:Request,product_id:int=Form(...),rating:int=Form(...),comment:str=Form(...),current_user:User=Depends(user_authentication),db:Session=Depends(get_db),csrf=Depends(csrf_protect)):
+
+    if rating < 1 or rating > 5 :
+        flash(request,"Rating must be between 1 and 5","error")
+        return RedirectResponse("/",status_code=303)
+    
+    purchased= db.query(Order).filter(Order.c_id==current_user.id,Order.p_id==product_id,Order.payment_status.in_(["PAID","COD"])).first()
+    if not purchased :
+        flash(request,"You can review only purchased products","error")
+        return RedirectResponse("/",status_code=303)
+
+    existing = db.query(Review).filter(Review.user_id == current_user.id , Review.product_id == product_id).first()
+
+    if existing : 
+        flash(request,"You already reviewed this product","error")
+        return RedirectResponse("/",303)
+
+    review = Review(user_id=current_user.id,product_id=product_id,rating=rating,comment=comment.strip())
+    db.add(review)
+    db.commit()
+
+    flash(request,"Review added successfully !","success")
+    return RedirectResponse("/",status_code=303)
 
 if __name__ == "__main__":
     import uvicorn
