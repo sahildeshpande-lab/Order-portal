@@ -285,38 +285,38 @@ def addproduct(request: Request,title: Optional[str] = Form(None),description: O
     db.refresh(new_product)
     flash(request, "Product added successfully", "success")
 
-    return RedirectResponse("/products", status_code=303)
+    return RedirectResponse("/", status_code=303)
     
 @app.post("/order",tags=["Order product endpoint"])
 def create_order(request:Request,product_id : int =Form(...),quantity:int = Form(...),current_user: User = Depends(user_authentication),db:Session=Depends(get_db)):
     
     product=db.query(Products).filter(Products.p_id==product_id).first()
     if not product :
-        return RedirectResponse(url="/products",status_code=303)
+        return RedirectResponse(url="/",status_code=303)
     
     if quantity <= 0 :
         flash(request, "Select valid quantity range", "error")
-        return RedirectResponse(url="/products",status_code=303)
+        return RedirectResponse(url="/",status_code=303)
 
     if quantity>100 :
         flash(request, "Out of stock", "error")
-        return RedirectResponse(url="/products",status_code=303)
+        return RedirectResponse(url="/",status_code=303)
     
     if quantity > product.stock_quantity :
         flash(request, "Thanks for adding the product , but we don't have stock right now . Stay tunned we will update it !", "error")
-        return RedirectResponse(url="/products",status_code=303)
+        return RedirectResponse(url="/",status_code=303)
     
     
     product.stock_quantity = product.stock_quantity - quantity 
 
     if product.stock_quantity < 0 :
         flash(request, "This product is currently out of stock", "error")
-        return RedirectResponse(url="/products",status_code=303)
+        return RedirectResponse(url="/",status_code=303)
     
     existing_order = db.query(Order).filter(Order.c_id==current_user.id,Order.p_id==product.p_id,Order.is_delivered==False).first()
 
     if existing_order :
-        return RedirectResponse(url="/products",status_code=303)
+        return RedirectResponse(url="/",status_code=303)
 
     discounted_price = product.price - (product.price * product.discount) /100 
     total_price= quantity * discounted_price
@@ -497,7 +497,7 @@ def updatediscount(request:Request,product_id:int=Form(...), discount:int=Form(.
     db.commit()
     db.refresh(exisiting)   
     flash(request, "Discount updated successfully", "success")
-    return RedirectResponse(url="/products",status_code=303)
+    return RedirectResponse(url="/",status_code=303)
 
 @app.post("/add-review",tags=["Review"])
 def add_review(request:Request,product_id:int=Form(...),rating:int=Form(...),comment:str=Form(...),current_user:User=Depends(user_authentication),db:Session=Depends(get_db),csrf=Depends(csrf_protect)):

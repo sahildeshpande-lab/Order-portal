@@ -5,7 +5,7 @@ from typing import Optional
 from sqlalchemy.sql import func
 import datetime
 
-DATABASE_URL = "sqlite:///./test.db"
+DATABASE_URL = "sqlite:///./data/test.db"
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
