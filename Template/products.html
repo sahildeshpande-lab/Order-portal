@@ -1,123 +1,100 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Products Portal</title>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <link href="{{ url_for('static', path='/style.css') }}" rel="stylesheet">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Products Portal</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link href="{{ url_for('static', path='style.css') }}" rel="stylesheet">
 </head>
-<style>
-    .view-more-btn {
-    display: block;
-    width: 100%;
-    padding: 10px;
-    background: #1a1a1a;
-    color: #fff;
-    border: none;
-    border-radius: 8px;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    letter-spacing: .3px;
-    text-align: center;
-    text-decoration: none;
-    transition: background .18s, transform .12s;
-}
 
-.view-more-btn:hover {
-    background: #c0392b;
-    transform: translateY(-1px);
-}
-</style>
 <body>
 
-    <header class="app-header">
-        <h2>Product Page</h2>
-        {% if user %}
-        <a href="/logout" class="logout-btn">Logout</a>
-        {% else %}
-        <a href="/login" class="logout-btn">Login</a>
-        {% endif %}
-    </header>
-
-    {% if flash %}
-    <div class="flash-container">
-        <div class="flash-message {{ flash.category }}">
-            <span>{{ flash.message }}</span>
-            <button class="flash-close" onclick="this.parentElement.remove()">×</button>
-        </div>
-    </div>
+  <header class="app-header">
+    <h2>Product <em>Portal</em></h2>
+    {% if user %}
+      <a href="/logout" class="logout-btn">Logout</a>
+    {% else %}
+      <a href="/login" class="logout-btn">Login</a>
     {% endif %}
+  </header>
 
-    {% if products %}
-    <section id="productSection" class="products-container" style="display:block;">
-        <div class="products-grid">
-            {% for product in products %}
-            <div class="product-col">
-                <div class="card">
-                    <img src="/{{ product.image }}" class="card-img-top" alt="{{ product.title }}">
-                    <div class="card-body">
-                        <h6>{{ product.title }}</h6>
-                        <p>{{ product.description }}</p>
-                        <div class="price-row">
-                            <span class="old-price">₹{{ product.price }}</span>
-                            <span class="new-price">
-                                ₹{{ product.price - ((product.price * product.discount) / 100) }}
-                            </span>
-                            <span class="badge">{{ product.discount }}% OFF</span>
-                        </div>
-                        <div class="review-summary">
-                            {% if review_map.get(product.p_id) %}
-                            ⭐ {{ review_map[product.p_id].avg }}
-                            ({{ review_map[product.p_id].count }} reviews)
-                            {% else %}
-                            No reviews yet
-                            {% endif %}
-                        </div>
-                    </div>
-                    <div class="card-footer">
-                        <a href="/product/{{ product.p_id }}" class="view-more-btn">👁 View More</a>
-                    </div>
-                </div>
+  {% if flash %}
+  <div class="flash-container">
+    <div class="flash-message {{ flash.category }}">
+      <span>{{ flash.message }}</span>
+      <button class="flash-close" onclick="this.parentElement.remove()">×</button>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if products %}
+  <div class="section-label">
+    <h1>Our <em>Collection</em></h1>
+    <span class="count-pill">{{ products|length }} items</span>
+  </div>
+
+  <section class="products-container">
+    <div class="products-grid">
+      {% for product in products %}
+      <div class="product-col">
+        <div class="card">
+
+          <div class="img-wrap">
+            <img src="/{{ product.image }}" class="card-img-top" alt="{{ product.title }}">
+            <span class="badge">{{ product.discount }}% OFF</span>
+          </div>
+
+          <div class="card-body">
+            <h6>{{ product.title }}</h6>
+            <p>{{ product.description }}</p>
+            <div class="price-row">
+              <span class="old-price">₹{{ product.price }}</span>
+              <span class="new-price">₹{{ product.price - ((product.price * product.discount) / 100) }}</span>
             </div>
-            {% endfor %}
+            <div class="review-summary">
+              {% if review_map.get(product.p_id) %}
+                ⭐ {{ review_map[product.p_id].avg }} &nbsp;·&nbsp; {{ review_map[product.p_id].count }} reviews
+              {% else %}
+                ○ No reviews yet
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="card-footer">
+            <a href="/product/{{ product.p_id }}" class="view-more-btn">View Details →</a>
+          </div>
+
         </div>
-    </section>
-    {% endif %}
-
-    <div class="actions-row">
-        <a class="fancy" href="/addproduct">
-            <span class="top-key"></span>
-            <span class="text">Add product</span>
-            <span class="bottom-key-1"></span>
-            <span class="bottom-key-2"></span>
-        </a>
-        <a class="fancy" href="/updatediscount">
-            <span class="top-key"></span>
-            <span class="text">Update discount</span>
-            <span class="bottom-key-1"></span>
-            <span class="bottom-key-2"></span>
-        </a>
-        {% if user %}
-        <a class="fancy" href="/products/get-orders/{{ user.id }}">
-            <span class="top-key"></span>
-            <span class="text">Go to Dashboard</span>
-            <span class="bottom-key-1"></span>
-            <span class="bottom-key-2"></span>
-        </a>
-        {% else %}
-        <a class="fancy" href="/login">
-            <span class="text">Go to Dashboard</span>
-        </a>
-        {% endif %}
+      </div>
+      {% endfor %}
     </div>
+  </section>
 
-    <script>
-        setTimeout(() => {
-            const f = document.querySelector('.flash-message');
-            if (f) f.remove();
-        }, 4000);
-    </script>
+  {% else %}
+  <div class="empty-state">
+    <div class="icon">🛍️</div>
+    <h3>No products yet</h3>
+    <p>Add your first product to get started.</p>
+  </div>
+  {% endif %}
+
+  <div class="section-divider"><hr></div>
+  <div class="actions-row">
+    <a class="action-btn primary" href="/addproduct">＋ &nbsp;Add Product</a>
+    <a class="action-btn secondary" href="/updatediscount">％ &nbsp;Update Discount</a>
+    {% if user %}
+      <a class="action-btn secondary" href="/products/get-orders/{{ user.id }}">⊞ &nbsp;Dashboard</a>
+    {% else %}
+      <a class="action-btn secondary" href="/login">→ &nbsp;Dashboard</a>
+    {% endif %}
+  </div>
+
+  <script>
+    setTimeout(() => {
+      const f = document.querySelector('.flash-message');
+      if (f) f.remove();
+    }, 4000);
+  </script>
 </body>
 </html>

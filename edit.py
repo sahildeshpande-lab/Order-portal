@@ -38,4 +38,4 @@ def update_product_category(product_id: int, new_category: str):
 
 
 if __name__ == "__main__":
-    update_product_category(8, "Energy Drink")
+    update_product_category(6, "Lifestyle & Misc")
