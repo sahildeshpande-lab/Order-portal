@@ -9,6 +9,7 @@ body {
     color: #1f2937;
     line-height: 1.4;
 }
+
 .app-header {
     background: #1e1e2d;
     color: #fff;
@@ -41,6 +42,7 @@ body {
 .logout-btn:hover {
     background: #bb2d3b;
 }
+
 .message {
     padding: 12px 16px;
     border-radius: 8px;
@@ -65,6 +67,7 @@ body {
 .text-center {
     text-align: center;
 }
+
 .actions-row {
     display: flex;
     justify-content: center;
@@ -73,15 +76,15 @@ body {
     flex-wrap: wrap;
 }
 
-.fancy { 
-    background-color: wheat; 
-    border: 2px solid #000 ; 
-    border-radius: 0; 
-    box-sizing: border-box; 
-    color: #b8a7a7; 
-    cursor: pointer; 
-    display: inline-block; 
-    font-weight: 700 ;
+.fancy {
+    background-color: wheat;
+    border: 2px solid #000;
+    border-radius: 0;
+    box-sizing: border-box;
+    color: #b8a7a7;
+    cursor: pointer;
+    display: inline-block;
+    font-weight: 700;
     letter-spacing: 0.05em;
     margin: 0;
     outline: none;
@@ -94,82 +97,94 @@ body {
     transition: all 0.3s ease-in-out;
     user-select: none;
     font-size: 13px;
-} 
-.fancy::before { 
-    content: " "  ;
-    width: 1.5625rem ;
-    height: 2px ;
-    background: black  ;
-    top: 50% ;
-    left: 1.5em ;
-    position: absolute ; 
-    transform: translateY(-50%) ; 
-    transform-origin: center ; 
-    transition: background 0.3s linear, width 0.3s linear; 
-} 
-.fancy .text { 
-    font-size: 1.125em ;
-    line-height: 1.33333em  ;
-    padding-left: 2em ;
-    display: block ;
-    text-align: left ;
-    transition: all 0.3s ease-in-out ;
-    text-transform: uppercase ;
-    text-decoration: none ;
-    color: rgb(125, 120, 120) ;
-} 
+}
+
+.fancy::before {
+    content: " ";
+    width: 1.5625rem;
+    height: 2px;
+    background: black;
+    top: 50%;
+    left: 1.5em;
+    position: absolute;
+    transform: translateY(-50%);
+    transform-origin: center;
+    transition: background 0.3s linear, width 0.3s linear;
+}
+
+.fancy .text {
+    font-size: 1.125em;
+    line-height: 1.33333em;
+    padding-left: 2em;
+    display: block;
+    text-align: left;
+    transition: all 0.3s ease-in-out;
+    text-transform: uppercase;
+    text-decoration: none;
+    color: rgb(125, 120, 120);
+}
+
 .fancy .top-key {
-    height: 2px ;
+    height: 2px;
     width: 1.5625rem;
     top: -2px;
     left: 0.625rem;
     position: absolute;
     background: #e8e8e8;
     transition: width 0.5s ease-out, left 0.3s ease-out;
-} 
-.fancy .bottom-key-1 { 
-    height: 2px  ;
-    width: 1.5625rem ;
-    right: 1.875rem ;
-    bottom: -2px ;
-    position: absolute ;
-    background: #e8e8e8 ;
-    transition: width 0.5s ease-out, right 0.3s ease-out ;
-} 
-.fancy .bottom-key-2 { 
-    height: 2px  ;
-    width: 0.625rem ; 
-    right: 0.625rem ;
-    bottom: -2px ;
-    position: absolute ; 
-    background: #e8e8e8 ;
-    transition: width 0.5s ease-out, right 0.3s ease-out  ;
-} 
-.fancy:hover { 
-    color: white; 
+}
+
+.fancy .bottom-key-1 {
+    height: 2px;
+    width: 1.5625rem;
+    right: 1.875rem;
+    bottom: -2px;
+    position: absolute;
+    background: #e8e8e8;
+    transition: width 0.5s ease-out, right 0.3s ease-out;
+}
+
+.fancy .bottom-key-2 {
+    height: 2px;
+    width: 0.625rem;
+    right: 0.625rem;
+    bottom: -2px;
+    position: absolute;
+    background: #e8e8e8;
+    transition: width 0.5s ease-out, right 0.3s ease-out;
+}
+
+.fancy:hover {
+    color: white;
     background: black;
-} 
-.fancy:hover::before { 
-    width: 0.9375rem; 
-    background: white; 
-} 
-.fancy:hover .text { 
-    color: white; 
-    padding-left: 1.5em; 
-} 
-.fancy:hover .top-key { 
-    left: -2px; 
-    width: 0px; 
-} 
-.fancy:hover .bottom-key-1, .fancy:hover .bottom-key-2 { 
-    right: 0; 
-    width: 0; 
+}
+
+.fancy:hover::before {
+    width: 0.9375rem;
+    background: white;
+}
+
+.fancy:hover .text {
+    color: white;
+    padding-left: 1.5em;
+}
+
+.fancy:hover .top-key {
+    left: -2px;
+    width: 0px;
+}
+
+.fancy:hover .bottom-key-1,
+.fancy:hover .bottom-key-2 {
+    right: 0;
+    width: 0;
 }
 
 .fancy:hover {
     background: black;
     color: white;
 }
+
 .products-container {
     max-width: 1200px;
     margin: 0 auto;
@@ -185,6 +200,7 @@ body {
 .product-col {
     display: flex;
 }
+
 .card {
     background: #ffffff;
     display: flex;
@@ -288,6 +304,7 @@ body {
 .order-btn.active:hover {
     background: #cf2222;
 }
+
 .order-form {
     margin-top: 10px;
     animation: fadeIn 0.3s ease;
@@ -310,6 +327,7 @@ body {
     color: white;
     width: 100%;
 }
+
 .flash-container {
     position: fixed;
     top: 20px;
@@ -329,12 +347,15 @@ body {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     animation: slideIn 0.3s ease-out;
 }
+
 .flash-message.success {
     background-color: #28a745;
 }
+
 .flash-message.danger {
     background-color: #dc3545;
 }
+
 .flash-close {
     background: none;
     border: none;
@@ -342,7 +363,8 @@ body {
     font-size: 18px;
     cursor: pointer;
 }
-   .review-summary {
+
+.review-summary {
     margin-top: 8px;
     font-size: 14px;
     font-weight: 500;
@@ -367,6 +389,7 @@ body {
 .review-toggle-btn.active {
     background: #ffdddd;
 }
+
 .reviewContainer {
     margin-top: 10px;
     padding: 10px;
@@ -374,6 +397,7 @@ body {
     background: #fafafa;
     border: 1px solid #eee;
 }
+
 .review-form select,
 .review-form textarea {
     width: 100%;
@@ -412,16 +436,19 @@ body {
         transform: translateX(100%);
         opacity: 0;
     }
+
     to {
         transform: translateX(0);
         opacity: 1;
     }
 }
+
 @keyframes fadeIn {
     from {
         opacity: 0;
         transform: translateY(6px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, Text ,String, create_engine , ForeignKey , Boolean ,DateTime
+from sqlalchemy import Column, Integer, Text ,String, create_engine , ForeignKey , Boolean ,DateTime ,Index
 from sqlalchemy.orm import sessionmaker, declarative_base , relationship
 from pydantic import BaseModel , EmailStr 
 from typing import Optional
@@ -9,6 +9,7 @@ DATABASE_URL = "sqlite:///./data/test.db"
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
+
 
 
 class User(Base):
@@ -66,10 +67,36 @@ class Review(Base):
     product_id = Column(Integer,ForeignKey("products.p_id"),nullable=False)
     rating=Column(Integer,nullable=False)
     comment=Column(Text,nullable=True)
-    created_at=Column(DateTime,default=datetime.datetime.now())
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     user=relationship("User")
     product = relationship("Products")
+
+
+class ProductView(Base):
+    __tablename__ = "product_views"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    product_id = Column(Integer, ForeignKey("products.p_id"), nullable=False)
+    viewed_at = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
+
+    user = relationship("User")
+    product = relationship("Products")
+
+
+
+
+class EmailLog(Base):
+    __tablename__ = "email_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    product_id = Column(Integer, ForeignKey("products.p_id"), nullable=True)
+    sent_at = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
+
+    user = relationship("User")
+
 
 class EmailCheck(BaseModel):
     email:EmailStr 
@@ -144,9 +171,16 @@ class ReviewResponse(BaseModel):
     class Config :
         orm_mode = True 
 
+
+class EmailLogRequest(BaseModel):
+    user_id: int
+    product_id: int
+
+
 Base.metadata.create_all(bind=engine)
 
-
+Index("idx_user_product_view", ProductView.user_id, ProductView.product_id)
+Index("idx_email_user_time", EmailLog.user_id, EmailLog.sent_at)
 
 def get_db():
     db = SessionLocal()

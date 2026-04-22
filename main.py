@@ -6,18 +6,20 @@ from sqlalchemy.orm import  Session
 from pydantic import  ValidationError
 from typing import List ,Optional
 from jose import jwt , JWTError
-from db import User , Products ,Order ,Transactions ,Payment,EmailCheck  , OrderResponse ,ProductManger , ProductCategory  , get_db ,ProductResponse , Review
+from datetime import datetime, timedelta
+from db import User , Products ,Order ,Transactions ,Payment,EmailCheck  , OrderResponse ,ProductManger , ProductCategory  , get_db ,ProductResponse , Review , ProductView ,EmailLog , EmailLogRequest
 import shutil 
 from starlette.middleware.sessions import SessionMiddleware
 from passlib.context import CryptContext 
-import datetime
 import uuid
-from sqlalchemy import func , or_
+import requests
+from sqlalchemy import func , or_ , text
 from starlette.exceptions import HTTPException as StarletteHTTPException
 import os
 import secrets
 import random
 import stripe 
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -59,7 +61,7 @@ def generate_csrf_token():
 def create_access_token(user_id:int) -> str:
     payload = {
         "sub":str(user_id),
-        "exp" : datetime.datetime.now() + datetime.timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        "exp" : datetime.now() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     }
     return jwt.encode(payload,SECRET_KEY,algorithm=ALGORITHM)
 
@@ -527,6 +529,166 @@ def add_review(request:Request,product_id:int=Form(...),rating:int=Form(...),com
 
     flash(request,"Review added successfully !","success")
     return RedirectResponse("/",status_code=303)
+
+
+
+@app.get("/product/{product_id}")
+def product_detail(
+    request: Request,
+    product_id: int,
+    db: Session = Depends(get_db)
+):
+
+    product = db.query(Products).filter(Products.p_id == product_id).first()
+
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    user = get_current_user_optional(request, db)
+
+    if user:
+        view = ProductView(
+            user_id=user.id,
+            product_id=product.p_id
+        )
+        db.add(view)
+        db.commit()
+        thirty_min_ago = datetime.utcnow() - timedelta(minutes=30)
+
+        recent_views_count = db.query(ProductView).filter(
+            ProductView.user_id == user.id,
+            ProductView.viewed_at >= thirty_min_ago
+        ).count()
+        if recent_views_count == 1:
+            try:
+                requests.post(
+                    "https://sahil9900.app.n8n.cloud/webhook-test/product-view",
+                    json={
+                        "user_id": user.id,
+                        "email": user.email,
+                        "product_id": product.p_id,
+                        "category": product.category,
+                        "timestamp": datetime.utcnow().isoformat()
+                    },
+                    timeout=2
+                )
+            except Exception as e:
+                print("Webhook failed:", e)
+
+    review_stats = (
+        db.query(
+            func.avg(Review.rating).label("avg_rating"),
+            func.count(Review.r_id).label("review_count")
+        )
+        .filter(Review.product_id == product_id)
+        .first()
+    )
+
+    avg_rating = round(review_stats.avg_rating, 1) if review_stats.avg_rating else 0
+    review_count = review_stats.review_count or 0
+
+    flash_message = request.session.pop("flash", None)
+
+    return templates.TemplateResponse(
+        "product_detail.html",
+        {
+            "request": request,
+            "product": product,
+            "user": user,
+            "avg_rating": avg_rating,
+            "review_count": review_count,
+            "flash": flash_message,
+        }
+    )
+
+@app.get("/check-purchase")
+def check_purchase(user_id: int, product_id: int, db: Session = Depends(get_db)):
+    count = db.query(Order).filter(
+        Order.c_id == user_id,
+        Order.p_id == product_id,
+        Order.payment_status.in_(["PAID", "COD"])
+    ).count()
+
+    return {"purchase_count": count , "user_id":user_id , "product_id" : product_id}
+
+@app.get("/check-email-log")
+def check_email_log(user_id: int, db: Session = Depends(get_db)):
+    result = db.execute(
+        text("""
+        SELECT sent_at FROM email_logs
+        WHERE user_id = :user_id
+        ORDER BY sent_at DESC
+        LIMIT 1
+        """),
+        {"user_id": user_id}
+    ).fetchone()
+
+    if not result:
+        return {"send": True}
+
+    last_email_time = result[0]
+
+    if isinstance(last_email_time, str):
+        try:
+            last_email_time = datetime.fromisoformat(last_email_time)
+        except Exception:
+            return {"send": True}
+
+    # if datetime.utcnow() - last_email_time > timedelta(hours=24):
+    if datetime.utcnow() - last_email_time > timedelta(minutes=1):
+        return {"send": True}
+
+    return {"send": False}
+
+@app.get("/recommend-products")
+def recommend_products(
+    category: str,
+    product_id: int,
+    email: str,
+    user_id: int,
+    db: Session = Depends(get_db)
+):
+    products = db.query(Products).filter(
+        Products.category == category
+    ).limit(3).all()
+
+    return [
+        {
+            "title": p.title,
+            "price": p.price,
+            "discount": p.discount,
+            "email": email,
+            "user_id": user_id
+        }
+        for p in products
+    ]
+
+
+@app.post("/log-email-debug")
+async def debug(request: Request):
+    body = await request.json()
+    print("BODY:", body)
+    return body
+
+@app.post("/log-email")
+def log_email(data: EmailLogRequest, db: Session = Depends(get_db)):
+    try:
+        db.execute(
+            text("""
+                INSERT INTO email_logs (user_id, product_id, sent_at)
+                VALUES (:user_id, :product_id, CURRENT_TIMESTAMP)
+            """),
+            {
+                "user_id": data.user_id,
+                "product_id": data.product_id
+            }
+        )
+        db.commit()
+
+        return {"status": "logged"}
+
+    except Exception as e:
+        print("ERROR:", str(e))
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn

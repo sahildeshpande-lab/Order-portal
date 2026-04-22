@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ product.title }} — Product Detail</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="{{ url_for('static', path='/style.css') }}" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --ink: #1a1a1a;
+            --ink-muted: #6b6b6b;
+            --cream: #faf8f4;
+            --surface: #ffffff;
+            --accent: #c0392b;
+            --accent-light: #fdf0ee;
+            --border: #e8e4dc;
+            --gold: #d4a843;
+            --shadow: 0 2px 24px rgba(0,0,0,0.08);
+            --radius: 16px;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--cream);
+            color: var(--ink);
+            min-height: 100vh;
+        }
+
+        .detail-header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 14px 40px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .detail-header .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--ink-muted);
+            text-decoration: none;
+            transition: color .2s;
+        }
+        .detail-header .back-link:hover { color: var(--accent); }
+        .detail-header .back-link svg { width: 18px; height: 18px; }
+        .header-brand {
+            font-family: 'DM Serif Display', serif;
+            font-size: 20px;
+            color: var(--ink);
+            letter-spacing: -.3px;
+        }
+        .header-user {
+            font-size: 13px;
+            color: var(--ink-muted);
+        }
+        .header-user a {
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .detail-wrapper {
+            max-width: 1100px;
+            margin: 48px auto;
+            padding: 0 24px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0;
+            background: var(--surface);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            min-height: 520px;
+        }
+
+        .image-panel {
+            position: relative;
+            background: var(--cream);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            min-height: 480px;
+        }
+        .image-panel::after {
+            content: '';
+            position: absolute;
+            right: 0; top: 10%; bottom: 10%;
+            width: 1px;
+            background: var(--border);
+        }
+        .product-image-main {
+            width: 100%;
+            max-width: 360px;
+            height: 360px;
+            object-fit: cover;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.10);
+            transition: transform .3s ease;
+        }
+        .product-image-main:hover { transform: scale(1.02); }
+        .discount-badge {
+            position: absolute;
+            top: 24px; left: 24px;
+            background: var(--accent);
+            color: #fff;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 6px 12px;
+            border-radius: 20px;
+            letter-spacing: .5px;
+        }
+        .category-tag {
+            position: absolute;
+            bottom: 24px; left: 24px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--ink-muted);
+            font-size: 11px;
+            font-weight: 500;
+            padding: 4px 10px;
+            border-radius: 20px;
+            text-transform: uppercase;
+            letter-spacing: .8px;
+        }
+
+        .info-panel {
+            padding: 48px 44px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .product-title {
+            font-family: 'DM Serif Display', serif;
+            font-size: 28px;
+            line-height: 1.25;
+            color: var(--ink);
+            letter-spacing: -.4px;
+        }
+        .product-description {
+            font-size: 14.5px;
+            line-height: 1.7;
+            color: var(--ink-muted);
+            font-weight: 300;
+        }
+
+        .price-block {
+            display: flex;
+            align-items: baseline;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .price-final {
+            font-size: 30px;
+            font-weight: 600;
+            color: var(--ink);
+        }
+        .price-original {
+            font-size: 16px;
+            color: var(--ink-muted);
+            text-decoration: line-through;
+        }
+        .price-savings {
+            font-size: 13px;
+            background: var(--accent-light);
+            color: var(--accent);
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-weight: 500;
+        }
+
+        .divider { height: 1px; background: var(--border); }
+
+        .reviews-section { display: flex; flex-direction: column; gap: 10px; }
+        .reviews-label {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--ink-muted);
+        }
+        .stars-row { display: flex; align-items: center; gap: 10px; }
+        .stars { display: flex; gap: 3px; }
+        .star { font-size: 18px; color: #ddd; }
+        .star.filled { color: var(--gold); }
+        .star.half { position: relative; color: #ddd; }
+        .star.half::before {
+            content: '★';
+            position: absolute;
+            left: 0; top: 0;
+            color: var(--gold);
+            width: 50%;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+        .rating-number { font-size: 20px; font-weight: 600; color: var(--ink); }
+        .review-count  { font-size: 13px; color: var(--ink-muted); }
+
+        .stock-info { font-size: 13px; font-weight: 500; }
+        .stock-info.in-stock    { color: #27ae60; }
+        .stock-info.low-stock   { color: #e67e22; }
+        .stock-info.out-of-stock{ color: var(--accent); }
+
+        .order-section { margin-top: auto; }
+        .order-form-inline { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .qty-input {
+            width: 90px;
+            padding: 12px 14px;
+            border: 1.5px solid var(--border);
+            border-radius: 10px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 15px;
+            color: var(--ink);
+            background: var(--cream);
+            outline: none;
+            transition: border-color .2s;
+        }
+        .qty-input:focus { border-color: var(--accent); }
+        .btn-order {
+            flex: 1;
+            padding: 13px 24px;
+            background: var(--ink);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            letter-spacing: .3px;
+            transition: background .2s, transform .1s;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn-order:hover  { background: var(--accent); transform: translateY(-1px); }
+        .btn-order:active { transform: translateY(0); }
+        .btn-order:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+
+        .flash-banner {
+            margin: 24px 40px 0;
+            padding: 14px 20px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .flash-banner.success { background: #eafaf1; color: #1e8449; }
+        .flash-banner.error   { background: var(--accent-light); color: var(--accent); }
+        .flash-close-btn { background: none; border: none; cursor: pointer; font-size: 18px; opacity: .6; line-height: 1; }
+
+        @media (max-width: 720px) {
+            .detail-wrapper {
+                grid-template-columns: 1fr;
+                margin: 16px;
+                padding: 0;
+            }
+            .image-panel { min-height: 260px; padding: 24px; }
+            .image-panel::after { display: none; }
+            .product-image-main { height: 220px; }
+            .info-panel { padding: 28px 24px; }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="detail-header">
+        <a href="/" class="back-link">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="15 18 9 12 15 6"/>
+            </svg>
+            Back to Products
+        </a>
+        <span class="header-brand">Product Portal</span>
+        <span class="header-user">
+            {% if user %}
+                Hello, {{ user.email.split('@')[0] }} &nbsp;|&nbsp; <a href="/logout">Logout</a>
+            {% else %}
+                <a href="/login">Login</a>
+            {% endif %}
+        </span>
+    </header>
+
+    {% if flash %}
+    <div class="flash-banner {{ flash['category'] }}">
+        <span>{{ flash['message'] }}</span>
+        <button class="flash-close-btn" onclick="this.parentElement.remove()">×</button>
+    </div>
+    {% endif %}
+
+    <div class="detail-wrapper">
+
+        <div class="image-panel">
+            <span class="discount-badge">{{ product.discount }}% OFF</span>
+            <img src="/{{ product.image }}" alt="{{ product.title }}" class="product-image-main">
+            <span class="category-tag">{{ product.category }}</span>
+        </div>
+
+        <div class="info-panel">
+
+            <h1 class="product-title">{{ product.title }}</h1>
+            <p  class="product-description">{{ product.description }}</p>
+
+            {# Compute once in Jinja2 — avoids repeating the formula and prevents
+               float-formatting issues with the old "%.0f"|format() approach        #}
+            {% set disc_price = (product.price - (product.price * product.discount / 100)) | int %}
+            {% set savings    = (product.price * product.discount / 100) | int %}
+
+            <div class="price-block">
+                <span class="price-final">₹{{ disc_price }}</span>
+                <span class="price-original">₹{{ product.price }}</span>
+                <span class="price-savings">Save ₹{{ savings }}</span>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="reviews-section">
+                <span class="reviews-label">Customer Reviews</span>
+                <div class="stars-row">
+                    <div class="stars" id="detailStars"></div>
+                    <span class="rating-number" id="detailRatingNum"></span>
+                    <span class="review-count"  id="detailReviewCount"></span>
+                </div>
+            </div>
+
+            {% if product.stock_quantity > 20 %}
+                <span class="stock-info in-stock">✓ In stock</span>
+            {% elif product.stock_quantity > 0 %}
+                <span class="stock-info low-stock">⚠ Only {{ product.stock_quantity }} left — order soon</span>
+            {% else %}
+                <span class="stock-info out-of-stock">✕ Out of stock</span>
+            {% endif %}
+
+            <div class="divider"></div>
+
+            <!-- Order -->
+            <div class="order-section">
+                {% if user %}
+                    {% if product.stock_quantity > 0 %}
+                    <form method="POST" action="/order" class="order-form-inline">
+                        <input type="hidden" name="product_id" value="{{ product.p_id }}">
+                        <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token') }}">
+                        <input
+                            type="number"
+                            name="quantity"
+                            class="qty-input"
+                            placeholder="Qty"
+                            min="1"
+                            max="{{ product.stock_quantity }}"
+                            required
+                        >
+                        <button type="submit" class="btn-order">🛒 Order Now</button>
+                    </form>
+                    {% else %}
+                    <button class="btn-order" disabled>Out of Stock</button>
+                    {% endif %}
+                {% else %}
+                    <a href="/login" class="btn-order">Login to Order</a>
+                {% endif %}
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // avg_rating / review_count come from Python as plain numbers.
+        // Wrapping in Number("...") guards against Jinja2 rendering None as
+        // the literal string "None", which would make toFixed() throw.
+        const avgRating   = Number("{{ avg_rating   | default(0) }}") || 0;
+        const reviewCount = Number("{{ review_count | default(0) }}") || 0;
+
+        const starsEl  = document.getElementById('detailStars');
+        const ratingEl = document.getElementById('detailRatingNum');
+        const countEl  = document.getElementById('detailReviewCount');
+
+        if (reviewCount > 0) {
+            ratingEl.textContent = avgRating.toFixed(1);
+            countEl.textContent  = `(${reviewCount} review${reviewCount !== 1 ? 's' : ''})`;
+
+            for (let i = 1; i <= 5; i++) {
+                const s = document.createElement('span');
+                s.textContent = '★';
+                if (i <= Math.floor(avgRating)) {
+                    // fully filled star
+                    s.className = 'star filled';
+                } else if (i === Math.ceil(avgRating) && (avgRating % 1) >= 0.4) {
+                    // half-star when fractional part is significant
+                    s.className = 'star half';
+                } else {
+                    s.className = 'star';
+                }
+                starsEl.appendChild(s);
+            }
+        } else {
+            ratingEl.textContent = 'No reviews yet';
+            for (let i = 0; i < 5; i++) {
+                const s = document.createElement('span');
+                s.className   = 'star';
+                s.textContent = '★';
+                starsEl.appendChild(s);
+            }
+        }
+
+        // Auto-dismiss flash after 4 s
+        const flashEl = document.querySelector('.flash-banner');
+        if (flashEl) setTimeout(() => flashEl.remove(), 4000);
+    </script>
+</body>
+</html>
