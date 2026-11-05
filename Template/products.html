@@ -12,11 +12,21 @@
 
   <header class="app-header">
     <h2>Product <em>Portal</em></h2>
-    {% if user %}
-      <a href="/logout" class="logout-btn">Logout</a>
-    {% else %}
-      <a href="/login" class="logout-btn">Login</a>
-    {% endif %}
+    <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+      {% if user %}
+        <span style="font-size: 13px; color: #fff; background: rgba(255,255,255,0.15); padding: 4px 10px; border-radius: 12px;">
+          {{ user.email }} (<strong>{{ user.role }}</strong>)
+        </span>
+        {% if user.role in ['delivery', 'admin'] %}
+          <a href="/delivery/orders" style="font-size: 13px; font-weight: 600; color: #fff; background: #27ae60; padding: 6px 14px; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; gap: 5px;">
+            🚚 Deliveries
+          </a>
+        {% endif %}
+        <a href="/logout" class="logout-btn">Logout</a>
+      {% else %}
+        <a href="/login" class="logout-btn">Login</a>
+      {% endif %}
+    </div>
   </header>
 
   {% if flash %}
@@ -29,9 +39,23 @@
   {% endif %}
 
   {% if products %}
-  <div class="section-label">
-    <h1>Our <em>Collection</em></h1>
-    <span class="count-pill">{{ products|length }} items</span>
+  <div class="section-label" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+    <div>
+      <h1>Our <em>Collection</em></h1>
+      <span class="count-pill">{{ total_products }} total items &nbsp;·&nbsp; Page {{ page }} of {{ total_pages }}</span>
+    </div>
+
+    <!-- Category selector -->
+    <div style="display: flex; gap: 8px; flex-wrap: wrap; max-width: 600px;">
+      <a href="/?page=1" style="text-decoration: none; font-size: 12px; padding: 5px 12px; border-radius: 20px; border: 1px solid #ddd; background: {{ '#080710' if not current_category else '#fff' }}; color: {{ '#fff' if not current_category else '#333' }}; font-weight: 500;">
+        All
+      </a>
+      {% for cat in categories %}
+      <a href="/?category={{ cat }}&page=1" style="text-decoration: none; font-size: 12px; padding: 5px 12px; border-radius: 20px; border: 1px solid #ddd; background: {{ '#080710' if current_category == cat else '#fff' }}; color: {{ '#fff' if current_category == cat else '#333' }}; font-weight: 500;">
+        {{ cat }}
+      </a>
+      {% endfor %}
+    </div>
   </div>
 
   <section class="products-container">
@@ -41,7 +65,7 @@
         <div class="card">
 
           <div class="img-wrap">
-            <img src="/{{ product.image }}" class="card-img-top" alt="{{ product.title }}">
+            <img src="{{ product.image if product.image.startswith('http') else '/' ~ product.image }}" class="card-img-top" alt="{{ product.title }}" loading="lazy">
             <span class="badge">{{ product.discount }}% OFF</span>
           </div>
 
@@ -49,8 +73,8 @@
             <h6>{{ product.title }}</h6>
             <p>{{ product.description }}</p>
             <div class="price-row">
-              <span class="old-price">₹{{ product.price }}</span>
-              <span class="new-price">₹{{ product.price - ((product.price * product.discount) / 100) }}</span>
+              <span class="old-price">₹{{ product.price|round|int }}</span>
+              <span class="new-price">₹{{ (product.price - ((product.price * product.discount) / 100))|round|int }}</span>
             </div>
             <div class="review-summary">
               {% if review_map.get(product.p_id) %}
@@ -71,6 +95,39 @@
     </div>
   </section>
 
+  <!-- Pagination Controls -->
+  {% if total_pages > 1 %}
+  <nav class="pagination-container" style="display: flex; justify-content: center; align-items: center; margin: 30px 0; gap: 6px; flex-wrap: wrap;">
+    {% if page > 1 %}
+      <a href="/?page=1{% if current_category %}&category={{ current_category }}{% endif %}" style="padding: 8px 12px; background: #fff; border: 1px solid #ddd; border-radius: 6px; text-decoration: none; color: #333; font-size: 13px;">« First</a>
+      <a href="/?page={{ page - 1 }}{% if current_category %}&category={{ current_category }}{% endif %}" style="padding: 8px 12px; background: #fff; border: 1px solid #ddd; border-radius: 6px; text-decoration: none; color: #333; font-size: 13px;">‹ Prev</a>
+    {% endif %}
+
+    {% set start_page = [1, page - 4]|max %}
+    {% set end_page = [total_pages, page + 4]|min %}
+
+    {% if start_page > 1 %}
+      <span style="padding: 8px 6px; color: #888;">...</span>
+    {% endif %}
+
+    {% for p in range(start_page, end_page + 1) %}
+      <a href="/?page={{ p }}{% if current_category %}&category={{ current_category }}{% endif %}"
+         style="padding: 8px 14px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: 600; {{ 'background: #080710; color: #fff; border: 1px solid #080710;' if p == page else 'background: #fff; color: #333; border: 1px solid #ddd;' }}">
+        {{ p }}
+      </a>
+    {% endfor %}
+
+    {% if end_page < total_pages %}
+      <span style="padding: 8px 6px; color: #888;">...</span>
+    {% endif %}
+
+    {% if page < total_pages %}
+      <a href="/?page={{ page + 1 }}{% if current_category %}&category={{ current_category }}{% endif %}" style="padding: 8px 12px; background: #fff; border: 1px solid #ddd; border-radius: 6px; text-decoration: none; color: #333; font-size: 13px;">Next ›</a>
+      <a href="/?page={{ total_pages }}{% if current_category %}&category={{ current_category }}{% endif %}" style="padding: 8px 12px; background: #fff; border: 1px solid #ddd; border-radius: 6px; text-decoration: none; color: #333; font-size: 13px;">Last ({{ total_pages }}) »</a>
+    {% endif %}
+  </nav>
+  {% endif %}
+
   {% else %}
   <div class="empty-state">
     <div class="icon">🛍️</div>
@@ -81,12 +138,28 @@
 
   <div class="section-divider"><hr></div>
   <div class="actions-row">
-    <a class="action-btn primary" href="/addproduct">＋ &nbsp;Add Product</a>
-    <a class="action-btn secondary" href="/updatediscount">％ &nbsp;Update Discount</a>
-    {% if user %}
-      <a class="action-btn secondary" href="/products/get-orders/{{ user.id }}">⊞ &nbsp;Dashboard</a>
-    {% else %}
-      <a class="action-btn secondary" href="/login">→ &nbsp;Dashboard</a>
+    {% if not user or user.role in ['admin', 'retainer'] %}
+      <a class="action-btn primary" href="/addproduct">＋ &nbsp;Add Product</a>
+    {% endif %}
+
+    {% if user and user.role == 'admin' %}
+      <a class="action-btn secondary" href="/updatediscount">％ &nbsp;Update Discount</a>
+      <a class="action-btn secondary" style="background: #9b2c2c; color: #fff;" href="/admin/role-requests">📋 &nbsp;Role Requests</a>
+    {% endif %}
+
+    {% if user and user.role in ['admin', 'viewer'] %}
+      <a class="action-btn secondary" href="/admin/profiles">👥 &nbsp;View Profiles</a>
+      <a class="action-btn secondary" href="/viewer/orders">📜 &nbsp;Trace All Orders</a>
+    {% endif %}
+
+    {% if user and user.role in ['delivery', 'admin'] %}
+      <a class="action-btn primary" style="background: #27ae60;" href="/delivery/orders">🚚 &nbsp;Delivery Orders</a>
+    {% endif %}
+
+    {% if user and user.role == 'user' %}
+      <a class="action-btn secondary" href="/products/get-orders/{{ user.id }}">⊞ &nbsp;My Orders</a>
+    {% elif not user %}
+      <a class="action-btn secondary" href="/login">→ &nbsp;Login</a>
     {% endif %}
   </div>
 

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Role Approval Requests - Order Portal Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="{{ url_for('static', path='/style.css') }}" rel="stylesheet">
+    <style>
+        body { font-family: 'Poppins', sans-serif; background: #f7f8fa; margin: 0; padding: 20px 40px; color: #2d3748; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 12px; border-bottom: 1px solid #e2e8f0; }
+        .card { background: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 20px; margin-bottom: 30px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 14px 16px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 14px; vertical-align: middle; }
+        th { background: #f8fafc; font-weight: 600; color: #4a5568; }
+        tr:hover { background: #f8fafc; }
+        .back-btn { background: #2b6cb0; color: #fff; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-size: 14px; }
+        .badge { display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; text-transform: uppercase; }
+        .badge-pending { background: #feebc8; color: #7c2d12; }
+        .badge-approved { background: #c6f6d5; color: #22543d; }
+        .badge-rejected { background: #fed7d7; color: #9b2c2c; }
+        .btn-approve {
+            background: #27ae60; color: #fff; border: none; padding: 6px 14px;
+            border-radius: 6px; font-weight: 600; font-size: 13px; cursor: pointer;
+            margin-right: 6px;
+        }
+        .btn-approve:hover { background: #219150; }
+        .btn-reject {
+            background: #e53e3e; color: #fff; border: none; padding: 6px 14px;
+            border-radius: 6px; font-weight: 600; font-size: 13px; cursor: pointer;
+        }
+        .btn-reject:hover { background: #c53030; }
+        .flash-msg {
+            padding: 12px 18px; border-radius: 6px; margin-bottom: 20px; font-size: 14px;
+        }
+        .flash-success { background: #c6f6d5; color: #22543d; border: 1px solid #9ae6b4; }
+        .flash-error { background: #fed7d7; color: #9b2c2c; border: 1px solid #feb2b2; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div>
+            <h1>Role Approval Requests</h1>
+            <p style="margin: 4px 0 0; color: #718096; font-size: 13px;">Logged in as Administrator: <strong>{{ current_admin.email }}</strong></p>
+        </div>
+        <div>
+            <a href="/admin/profiles" class="back-btn" style="background: #4a5568; margin-right: 8px;">View Profiles</a>
+            <a href="/" class="back-btn">← Back to Portal</a>
+        </div>
+    </div>
+
+    {% if flash %}
+    <div class="flash-msg flash-{{ flash.category }}">
+        {{ flash.message }}
+    </div>
+    {% endif %}
+
+    <div class="card">
+        <h2 style="font-size: 18px; margin-top: 0; margin-bottom: 16px; border-bottom: 2px solid #edf2f7; padding-bottom: 8px;">
+            Pending Role Requests ({{ pending_requests|length }})
+        </h2>
+
+        {% if pending_requests %}
+        <table>
+            <thead>
+                <tr>
+                    <th>User ID</th>
+                    <th>Email</th>
+                    <th>Current Role</th>
+                    <th>Requested Role</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for req in pending_requests %}
+                <tr>
+                    <td>#{{ req.id }}</td>
+                    <td><strong>{{ req.email }}</strong></td>
+                    <td><span style="color: #718096;">{{ req.role }}</span></td>
+                    <td><span class="badge" style="background: #e2e8f0; color: #1a202c;">{{ req.requested_role }}</span></td>
+                    <td><span class="badge badge-pending">PENDING</span></td>
+                    <td>
+                        <form method="POST" action="/admin/role-requests/{{ req.id }}/approve" style="display: inline;" onsubmit="return confirm('Approve {{ req.requested_role }} role for {{ req.email }}?');">
+                            <input type="hidden" name="csrf_token" value="{{ request.cookies.csrf_token }}">
+                            <button type="submit" class="btn-approve">✓ Approve</button>
+                        </form>
+
+                        <form method="POST" action="/admin/role-requests/{{ req.id }}/reject" style="display: inline;" onsubmit="return confirm('Reject {{ req.requested_role }} request for {{ req.email }}?');">
+                            <input type="hidden" name="csrf_token" value="{{ request.cookies.csrf_token }}">
+                            <button type="submit" class="btn-reject">✕ Reject</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p style="color: #718096; font-size: 14px; margin: 10px 0;">No pending role approval requests at this time.</p>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <h2 style="font-size: 18px; margin-top: 0; margin-bottom: 16px; border-bottom: 2px solid #edf2f7; padding-bottom: 8px;">
+            Resolved Requests History
+        </h2>
+
+        {% if resolved_requests %}
+        <table>
+            <thead>
+                <tr>
+                    <th>User ID</th>
+                    <th>Email</th>
+                    <th>Active Role</th>
+                    <th>Requested Role</th>
+                    <th>Resolution</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for req in resolved_requests %}
+                <tr>
+                    <td>#{{ req.id }}</td>
+                    <td>{{ req.email }}</td>
+                    <td><strong>{{ req.role }}</strong></td>
+                    <td>{{ req.requested_role or '—' }}</td>
+                    <td>
+                        {% if req.approval_status == 'approved' %}
+                            <span class="badge badge-approved">APPROVED</span>
+                        {% elif req.approval_status == 'rejected' %}
+                            <span class="badge badge-rejected">REJECTED</span>
+                        {% else %}
+                            <span class="badge">{{ req.approval_status }}</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p style="color: #718096; font-size: 14px; margin: 10px 0;">No past request records found.</p>
+        {% endif %}
+    </div>
+
+</body>
+</html>

@@ -21,9 +21,9 @@ def pytest_configure(config):
     print("\n" + "="*70)
     print("Starting Test Suite - Order Portal API")
     print("="*70)
-    print("⚠️  Using isolated test database: test_suite.db")
-    print("⚠️  Using isolated uploads directory: test_uploads/")
-    print("⚠️  Your main test.db and uploads/ will NOT be affected")
+    print("[*] Using isolated test database: test_suite.db")
+    print("[*] Using isolated uploads directory: test_uploads/")
+    print("[*] Your main test.db and uploads/ will NOT be affected")
     print("="*70 + "\n")
 
 
@@ -36,17 +36,17 @@ def pytest_unconfigure(config):
     if os.path.exists("test_suite.db"):
         try:
             os.remove("test_suite.db")
-            print("✓ Removed test database: test_suite.db")
+            print("[+] Removed test database: test_suite.db")
         except Exception as e:
-            print(f"⚠️  Could not remove test_suite.db: {e}")
+            print(f"[*] Could not remove test_suite.db: {e}")
     
 
     if os.path.exists("test_uploads"):
         try:
             shutil.rmtree("test_uploads")
-            print("✓ Removed test uploads: test_uploads/")
+            print("[+] Removed test uploads: test_uploads/")
         except Exception as e:
-            print(f"⚠️  Could not remove test_uploads: {e}")
+            print(f"[*] Could not remove test_uploads: {e}")
     
     if os.path.exists("__pycache__"):
         try:

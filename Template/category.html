@@ -31,6 +31,17 @@
                 <a href="#">Category</a>
             </li>
 
+            <li><a href="/profile">My Profile</a></li>
+
+            {% if user and user.role in ['delivery', 'admin'] %}
+            <li><a href="/delivery/orders" style="color: #27ae60; font-weight: 600;">🚚 Deliveries</a></li>
+            {% endif %}
+
+            {% if user and user.role in ['admin', 'viewer'] %}
+            <li><a href="/admin/profiles">User & Retainer Profiles</a></li>
+            <li><a href="/viewer/orders">Audit All Orders</a></li>
+            {% endif %}
+
             
         </ul>
 
@@ -77,7 +88,7 @@
                                
                             </td>
                             <td class="total-price">
-                                ₹{{ res.total_price }}
+                                ₹{{ res.total_price|round|int }}
                             </td>
                            
                         </tr>

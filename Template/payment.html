@@ -116,14 +116,14 @@
 <div id="card-section">
     <div class="section-title mt-4">PAY USING UPI / CARD</div>
     <div id="payment-element"></div>
+    <div id="stripe-loading" class="text-muted small mt-2" style="display:none;">Loading card fields...</div>
+    <div id="payment-error-msg" class="text-danger small mt-2" style="display:none;"></div>
 </div>
 
 <input type="hidden" name="payment_intent_id" id="payment_intent_id">
 
-
-
     <div class="mt-4">
-        <button type="submit" class="pay-btn">Pay ₹{{ total_amount }}</button>
+        <button type="submit" id="submit-btn" class="pay-btn">Pay ₹{{ total_amount }}</button>
     </div>
 
 </div>
@@ -135,17 +135,60 @@ function toggleCard(show) {
     section.style.display = show ? "block" : "none";
 }
 
-const stripe = Stripe("{{ stripe_pk }}");
+const stripePk = "{{ stripe_pk }}";
+const clientSecret = "{{ client_secret }}";
+let stripe = null;
+let elements = null;
+let paymentElement = null;
 
-let elements;
-let paymentElement;
+if (stripePk && stripePk !== "None" && stripePk.trim() !== "") {
+    try {
+        stripe = Stripe(stripePk);
+    } catch (err) {
+        console.error("Failed to initialize Stripe:", err);
+    }
+}
 
 function mountStripe() {
     if (paymentElement) return;
 
-    elements = stripe.elements({ clientSecret: "{{ client_secret }}" });
-    paymentElement = elements.create("payment");
-    paymentElement.mount("#payment-element");
+    if (!stripe || !clientSecret || clientSecret === "None") {
+        const errorEl = document.getElementById("payment-error-msg");
+        if (errorEl) {
+            errorEl.innerText = "Payment provider configuration is pending. Please select Cash on Delivery (COD).";
+            errorEl.style.display = "block";
+        }
+        return;
+    }
+
+    try {
+        const loadingEl = document.getElementById("stripe-loading");
+        if (loadingEl) loadingEl.style.display = "block";
+
+        elements = stripe.elements({ clientSecret: clientSecret });
+        paymentElement = elements.create("payment");
+        paymentElement.mount("#payment-element");
+
+        paymentElement.on("ready", () => {
+            if (loadingEl) loadingEl.style.display = "none";
+        });
+        paymentElement.on("loaderror", (event) => {
+            if (loadingEl) loadingEl.style.display = "none";
+            const errorEl = document.getElementById("payment-error-msg");
+            if (errorEl) {
+                errorEl.innerText = event.error ? event.error.message : "Failed to load payment fields.";
+                errorEl.style.display = "block";
+            }
+        });
+    } catch (err) {
+        const loadingEl = document.getElementById("stripe-loading");
+        if (loadingEl) loadingEl.style.display = "none";
+        const errorEl = document.getElementById("payment-error-msg");
+        if (errorEl) {
+            errorEl.innerText = err.message || "Failed to initialize payment fields.";
+            errorEl.style.display = "block";
+        }
+    }
 }
 
 document.querySelectorAll('input[name="method"]').forEach(radio => {
@@ -161,23 +204,57 @@ document.querySelectorAll('input[name="method"]').forEach(radio => {
 
 const form = document.querySelector("form");
 form.addEventListener("submit", async (e) => {
-    const method = document.querySelector('input[name="method"]:checked').value;
+    const methodInput = document.querySelector('input[name="method"]:checked');
+    const method = methodInput ? methodInput.value : "COD";
 
     if (method !== "CARD") return;
 
-    e.preventDefault();
-
-    const { error } = await stripe.confirmPayment({elements,redirect: "if_required"});
-
-    if (error) {
-        alert(error.message);
+    if (!stripe || !elements) {
+        e.preventDefault();
+        alert("Card payment fields could not be loaded. Please choose Cash on Delivery (COD).");
         return;
     }
-    const { paymentIntent } = await stripe.retrievePaymentIntent("{{ client_secret }}");
 
-    if (paymentIntent.status === "succeeded") {
-        document.getElementById("payment_intent_id").value = paymentIntent.id;
-        form.submit();
+    e.preventDefault();
+    const submitBtn = document.getElementById("submit-btn");
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerText = "Processing...";
+    }
+
+    try {
+        const { error } = await stripe.confirmPayment({
+            elements,
+            redirect: "if_required"
+        });
+
+        if (error) {
+            alert(error.message);
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerText = "Pay ₹{{ total_amount }}";
+            }
+            return;
+        }
+
+        const { paymentIntent } = await stripe.retrievePaymentIntent(clientSecret);
+
+        if (paymentIntent && paymentIntent.status === "succeeded") {
+            document.getElementById("payment_intent_id").value = paymentIntent.id;
+            form.submit();
+        } else {
+            alert("Payment could not be confirmed. Please check your card or select COD.");
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerText = "Pay ₹{{ total_amount }}";
+            }
+        }
+    } catch (err) {
+        alert("Payment error: " + err.message);
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerText = "Pay ₹{{ total_amount }}";
+        }
     }
 });
 

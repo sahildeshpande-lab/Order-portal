@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>All Users Orders & Trace - Viewer & Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="{{ url_for('static', path='/style.css') }}" rel="stylesheet">
+    <style>
+        body { font-family: 'Poppins', sans-serif; background: #f7f8fa; margin: 0; padding: 20px 40px; color: #2d3748; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 12px; border-bottom: 1px solid #e2e8f0; }
+        .header h1 { margin: 0; font-size: 24px; }
+        .back-btn { background: #2b6cb0; color: #fff; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-size: 14px; }
+        .card { background: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 20px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px 14px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
+        th { background: #f8fafc; font-weight: 600; color: #4a5568; }
+        tr:hover { background: #f8fafc; }
+        .status-badge { display: inline-block; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
+        .status-paid { background: #c6f6d5; color: #22543d; }
+        .status-pending { background: #feebc8; color: #7c2d12; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <h1>Global Orders Audit & Trace</h1>
+            <p style="margin: 4px 0 0; color: #718096; font-size: 13px;">Logged in as: <strong>{{ user.email }}</strong> (Role: {{ user.role }})</p>
+        </div>
+        <div>
+            <a href="/admin/profiles" class="back-btn" style="background: #4a5568; margin-right: 8px;">View Profiles</a>
+            <a href="/" class="back-btn">← Back to Portal</a>
+        </div>
+    </div>
+
+    <div class="card">
+        {% if orders %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Order ID</th>
+                    <th>Customer Email</th>
+                    <th>Product</th>
+                    <th>Qty</th>
+                    <th>Total Price</th>
+                    <th>Payment Status</th>
+                    <th>Delivered</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for o, p, u in orders %}
+                <tr>
+                    <td>#{{ o.o_id }}</td>
+                    <td>{{ u.email if u else "Unknown User (ID: " ~ o.c_id ~ ")" }}</td>
+                    <td><strong>{{ p.title }}</strong></td>
+                    <td>{{ o.quantity }}</td>
+                    <td>₹{{ o.total_price|round|int }}</td>
+                    <td>
+                        <span class="status-badge {{ 'status-paid' if o.payment_status == 'PAID' or o.payment_status == 'COD' else 'status-pending' }}">
+                            {{ o.payment_status }}
+                        </span>
+                    </td>
+                    <td>{{ "✅ Yes" if o.is_delivered else "⏳ In Progress" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p style="color: #a0aec0; text-align: center; padding: 40px 0;">No customer orders placed yet.</p>
+        {% endif %}
+    </div>
+</body>
+</html>

@@ -286,7 +286,11 @@
         <span class="header-brand">Product Portal</span>
         <span class="header-user">
             {% if user %}
-                Hello, {{ user.email.split('@')[0] }} &nbsp;|&nbsp; <a href="/logout">Logout</a>
+                Hello, {{ user.email.split('@')[0] }} (<strong>{{ user.role }}</strong>)
+                {% if user.role in ['delivery', 'admin'] %}
+                    &nbsp;|&nbsp; <a href="/delivery/orders" style="background: #27ae60; color: #fff; padding: 4px 10px; border-radius: 6px; font-weight: 600; text-decoration: none;">🚚 Deliveries</a>
+                {% endif %}
+                &nbsp;|&nbsp; <a href="/logout">Logout</a>
             {% else %}
                 <a href="/login">Login</a>
             {% endif %}
@@ -304,7 +308,7 @@
 
         <div class="image-panel">
             <span class="discount-badge">{{ product.discount }}% OFF</span>
-            <img src="/{{ product.image }}" alt="{{ product.title }}" class="product-image-main">
+            <img src="{{ product.image if product.image.startswith('http') else '/' ~ product.image }}" alt="{{ product.title }}" class="product-image-main">
             <span class="category-tag">{{ product.category }}</span>
         </div>
 
@@ -348,7 +352,14 @@
             <!-- Order -->
             <div class="order-section">
                 {% if user %}
-                    {% if product.stock_quantity > 0 %}
+                    {% if user.role != 'user' %}
+                        <div style="background: #fff3cd; color: #856404; padding: 12px; border-radius: 8px; font-size: 14px; margin-bottom: 10px;">
+                            ℹ️ Logged in as <strong>{{ user.role }}</strong>. Orders can only be placed by Customer (User) accounts.
+                        </div>
+                        {% if user.role in ['delivery', 'admin'] %}
+                        <a href="/delivery/orders" class="btn-order" style="background: #27ae60; text-align: center;">🚚 Open Delivery Dashboard</a>
+                        {% endif %}
+                    {% elif product.stock_quantity > 0 %}
                     <form method="POST" action="/order" class="order-form-inline">
                         <input type="hidden" name="product_id" value="{{ product.p_id }}">
                         <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token') }}">

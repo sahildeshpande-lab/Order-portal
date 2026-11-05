@@ -32,9 +32,33 @@
     <label for="password">Password</label>
     <input type="password" name="password" id="password" placeholder="Create a password" required>
 
-    <button type="submit" class="submitButton">
+    <label for="role">Select Role</label>
+    <select name="role" id="role" onchange="updateRoleNotice(this.value)" style="display: block; width: 100%; height: 50px; background-color: rgba(255,255,255,0.07); border-radius: 3px; padding: 0 10px; margin-top: 8px; font-size: 14px; font-weight: 300; color: #e5e5e5; border: none; outline: none;">
+        <option value="user" style="background: #080710; color: #fff;" selected>User (Immediate Access)</option>
+        <option value="retainer" style="background: #080710; color: #fff;">Retainer (Immediate Access)</option>
+        <option value="admin" style="background: #080710; color: #fff;">Admin (Requires Admin Approval)</option>
+        <option value="viewer" style="background: #080710; color: #fff;">Viewer (Requires Admin Approval)</option>
+        <option value="delivery" style="background: #080710; color: #fff;">Delivery Agent (Requires Admin Approval)</option>
+    </select>
+
+    <div id="approvalNotice" style="display: none; margin-top: 12px; padding: 10px; background: rgba(234, 179, 8, 0.15); border: 1px solid rgba(234, 179, 8, 0.4); border-radius: 6px; color: #fef08a; font-size: 12px; line-height: 1.4;">
+        ⚠️ <strong>Notice:</strong> Admin, Viewer, and Delivery Agent accounts require approval by an existing authorized Administrator before elevated permissions are granted.
+    </div>
+
+    <button type="submit" class="submitButton" style="margin-top: 24px;">
         Create Account
     </button>
+
+    <script>
+    function updateRoleNotice(role) {
+        const notice = document.getElementById('approvalNotice');
+        if (role === 'admin' || role === 'viewer' || role === 'delivery') {
+            notice.style.display = 'block';
+        } else {
+            notice.style.display = 'none';
+        }
+    }
+    </script>
 
     <p style="margin-top: 16px; text-align: center; font-size: 13px;">
         Already have an account?

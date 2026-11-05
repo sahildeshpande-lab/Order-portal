@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account Status - Order Portal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="{{ url_for('static', path='/style3.css') }}" rel="stylesheet">
+    <style>
+        .status-box {
+            text-align: center;
+            padding: 10px 0;
+        }
+        .badge {
+            display: inline-block;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin: 12px 0;
+        }
+        .badge-pending {
+            background: rgba(234, 179, 8, 0.25);
+            color: #fef08a;
+            border: 1px solid rgba(234, 179, 8, 0.5);
+        }
+        .badge-rejected {
+            background: rgba(239, 68, 68, 0.25);
+            color: #fca5a5;
+            border: 1px solid rgba(239, 68, 68, 0.5);
+        }
+        .info-text {
+            color: #e2e8f0;
+            font-size: 13px;
+            line-height: 1.6;
+            margin: 15px 0 25px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="background">
+        <div class="shape"></div>
+        <div class="shape"></div>
+    </div>
+
+    <div class="form" style="height: auto; min-height: 440px; padding: 40px 35px;">
+        <h3>Access Restricted</h3>
+
+        <div class="status-box">
+            <p style="color: #cbd5e1; font-size: 14px; margin: 0;">Account: <strong>{{ user.email }}</strong></p>
+            <p style="color: #cbd5e1; font-size: 13px; margin: 6px 0 0;">Active Role: <strong>{{ user.role }}</strong></p>
+            <p style="color: #cbd5e1; font-size: 13px; margin: 6px 0 0;">Requested Role: <strong>{{ user.requested_role or 'None' }}</strong></p>
+
+            {% if user.approval_status == 'pending' %}
+                <div class="badge badge-pending">⏳ Status: Approval Pending</div>
+                <div class="info-text">
+                    Your request for <strong>{{ user.requested_role }}</strong> privileges is currently under review by the Administrator. 
+                    Elevated permissions will be granted once an authorized Admin approves your account.
+                </div>
+            {% elif user.approval_status == 'rejected' %}
+                <div class="badge badge-rejected">❌ Status: Request Rejected</div>
+                <div class="info-text">
+                    Your request for elevated <strong>{{ user.requested_role }}</strong> access was reviewed and declined by the Administrator. 
+                    You may continue using standard Customer features, or contact support if you believe this is an error.
+                </div>
+            {% endif %}
+
+            <a href="/" class="submitButton" style="text-decoration: none; display: inline-block; text-align: center; line-height: 50px; margin-top: 10px;">
+                Continue to Portal
+            </a>
+
+            <a href="/logout" class="submitButton secondary" style="text-decoration: none; display: inline-block; text-align: center; line-height: 50px; margin-top: 12px; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.4); color: #fca5a5;">
+                Logout
+            </a>
+        </div>
+    </div>
+
+</body>
+</html>

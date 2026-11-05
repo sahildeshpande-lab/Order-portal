@@ -7,7 +7,7 @@ from pydantic import  ValidationError
 from typing import List ,Optional
 from jose import jwt , JWTError
 from datetime import datetime, timedelta
-from db import User , Products ,Order ,Transactions ,Payment,EmailCheck  , OrderResponse ,ProductManger , ProductCategory  , get_db ,ProductResponse , Review , ProductView ,EmailLog , EmailLogRequest
+from db import User , Products ,Order ,Transactions ,Payment,EmailCheck  , OrderResponse ,ProductManger , ProductCategory  , get_db ,ProductResponse , Review , ProductView ,EmailLog , EmailLogRequest, UserRole, Profile, ApprovalStatus
 import shutil 
 from starlette.middleware.sessions import SessionMiddleware
 from passlib.context import CryptContext 
@@ -96,6 +96,25 @@ def user_authentication(request:Request,db:Session=Depends(get_db))-> User:
         raise  HTTPException(status_code=401, detail="Invalid session")
     return user
 
+
+def require_roles(*allowed_roles):
+    """Dependency factory that checks if authenticated user has one of allowed roles and is approved."""
+    def role_checker(request: Request, current_user: User = Depends(user_authentication)) -> User:
+        # Check approval status
+        if getattr(current_user, "approval_status", "approved") != ApprovalStatus.APPROVED.value:
+            if request.headers.get("accept", "").startswith("text/html"):
+                return RedirectResponse("/account/status", status_code=303)
+            raise HTTPException(status_code=403, detail="Forbidden: Account role is pending administrator approval")
+
+        role_vals = [r.value if hasattr(r, "value") else str(r) for r in allowed_roles]
+        if current_user.role not in role_vals:
+            if request.headers.get("accept", "").startswith("text/html"):
+                flash(request, "Access denied: insufficient permissions for your role", "error")
+                return RedirectResponse("/", status_code=303)
+            raise HTTPException(status_code=403, detail=f"Forbidden: requires role in {role_vals}")
+        return current_user
+    return role_checker
+
 def no_cache(response):
     response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate ,max-age=0"
     response.headers["Pragma"] = "no-cache"
@@ -128,6 +147,11 @@ def flash(request: Request, message: str, category: str = "success"):
 async def auth_exception_handler(request: Request, exc: HTTPException):
     if exc.status_code == 401 and request.headers.get("accept", "").startswith("text/html"):
         return RedirectResponse("/login", 303)
+    if exc.status_code == 403 and request.headers.get("accept", "").startswith("text/html"):
+        if "pending" in str(exc.detail).lower():
+            return RedirectResponse("/account/status", 303)
+        flash(request, "Access denied: insufficient permissions for your role", "error")
+        return RedirectResponse("/", 303)
     return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
 
 @app.exception_handler(StarletteHTTPException)
@@ -145,20 +169,79 @@ async def ensure_csrf_cookie(request: Request, call_next):
     return response
 
 
+import math
+
 @app.get("/")
-def products_home(request:Request,db:Session=Depends(get_db)):
-    products = db.query(Products).all()
-    user = get_current_user_optional(request,db)
-    reviews=db.query(Review.product_id,func.avg(Review.rating).label("avg_rating"),func.count(Review.r_id).label("review_count")).group_by(Review.product_id).all()
-    review_map={r.product_id : {"avg":round(r.avg_rating,1),"count":r.review_count} for r in reviews}
-    flash_message=request.session.pop("flash",None)
-    return templates.TemplateResponse("products.html",{"request":request,"products":products,"user":user, "user_id": user.id if user else None,"flash":flash_message,"review_map":review_map})
+def products_home(request: Request, page: int = 1, per_page: int = 10, category: Optional[str] = None, db: Session = Depends(get_db)):
+    if page < 1:
+        page = 1
+    if per_page < 1:
+        per_page = 10
+    
+    query = db.query(Products)
+    if category and category.strip():
+        query = query.filter(Products.category == category.strip())
+
+    total_products = query.count()
+    total_pages = max(1, math.ceil(total_products / per_page))
+    if page > total_pages:
+        page = total_pages
+
+    offset = (page - 1) * per_page
+    products = query.order_by(Products.p_id.desc()).offset(offset).limit(per_page).all()
+    user = get_current_user_optional(request, db)
+
+    # Fetch reviews only for currently displayed products
+    product_ids = [p.p_id for p in products]
+    reviews = []
+    if product_ids:
+        reviews = (
+            db.query(
+                Review.product_id,
+                func.avg(Review.rating).label("avg_rating"),
+                func.count(Review.r_id).label("review_count")
+            )
+            .filter(Review.product_id.in_(product_ids))
+            .group_by(Review.product_id)
+            .all()
+        )
+    review_map = {r.product_id: {"avg": round(r.avg_rating, 1), "count": r.review_count} for r in reviews}
+    flash_message = request.session.pop("flash", None)
+
+    # All distinct categories for filter buttons
+    categories = [c[0] for c in db.query(Products.category).distinct().all() if c[0]]
+
+    return templates.TemplateResponse("products.html", {
+        "request": request,
+        "products": products,
+        "user": user,
+        "user_id": user.id if user else None,
+        "flash": flash_message,
+        "review_map": review_map,
+        "page": page,
+        "total_pages": total_pages,
+        "total_products": total_products,
+        "per_page": per_page,
+        "current_category": category or "",
+        "categories": categories
+    })
 
 @app.get("/login")
 def login_page(request: Request, db: Session = Depends(get_db)):
-    if get_current_user_optional(request, db):
+    current_user = get_current_user_optional(request, db)
+    if current_user:
+        if current_user.approval_status != ApprovalStatus.APPROVED.value:
+            return RedirectResponse("/account/status", 303)
         return RedirectResponse("/", 303)
     return templates.TemplateResponse("index.html",{"request": request, "user": None})
+
+@app.get("/account/status")
+def account_status_page(request: Request, current_user: User = Depends(user_authentication)):
+    response = templates.TemplateResponse("approval_status.html", {
+        "request": request,
+        "user": current_user
+    })
+    return no_cache(response)
 
 @app.post("/login",tags=["Login User endpoint"])
 def login_form(request: Request,email: str = Form(...),password: str = Form(...),db: Session = Depends(get_db),csrf=Depends(csrf_protect)):
@@ -178,7 +261,12 @@ def login_form(request: Request,email: str = Form(...),password: str = Form(...)
     access_token= create_access_token(user.id)
     csrf_token = generate_csrf_token()
 
-    response = RedirectResponse("/",status_code=303)
+    # Route based on approval status
+    target_url = "/"
+    if getattr(user, "approval_status", "approved") != ApprovalStatus.APPROVED.value:
+        target_url = "/account/status"
+
+    response = RedirectResponse(target_url, status_code=303)
     response.set_cookie(key="access_token",value=access_token,httponly=True,samesite="lax",secure=True,path="/")
     response.set_cookie(key="csrf_token",value=csrf_token,httponly=False,samesite="lax",secure=True,path="/")
     return response
@@ -195,7 +283,7 @@ def register_page(request: Request):
     return templates.TemplateResponse("register.html", {"request": request})
 
 @app.post("/register",tags=["Register User endpoint"])
-def register_user(request:Request, email:str=Form(...),password:str=Form(...),db:Session=Depends(get_db),csrf=Depends(csrf_protect)):
+def register_user(request:Request, email:str=Form(...),password:str=Form(...),role:str=Form(UserRole.USER.value),db:Session=Depends(get_db),csrf=Depends(csrf_protect)):
     try :
         EmailCheck(email=email)
     except ValidationError :
@@ -203,15 +291,62 @@ def register_user(request:Request, email:str=Form(...),password:str=Form(...),db
     
     if db.query(User).filter(User.email == email).first() :
         return templates.TemplateResponse("index.html",{"request":request,"message" :"User already exists"})
+    
+    valid_roles = [r.value for r in UserRole]
+    requested_role_clean = role.strip().lower() if role and role.strip().lower() in valid_roles else UserRole.USER.value
+
+    # Registration Policy:
+    # User and Retainer: active immediately
+    # Admin, Viewer, Delivery: create pending request, active role is user
+    if requested_role_clean in [UserRole.USER.value, UserRole.RETAINER.value]:
+        assigned_active_role = requested_role_clean
+        req_role_val = None
+        approval_status_val = ApprovalStatus.APPROVED.value
+    else:
+        assigned_active_role = UserRole.USER.value
+        req_role_val = requested_role_clean
+        approval_status_val = ApprovalStatus.PENDING.value
+
     hashed=hash_password(password)
-    new_user = User(email=email,password=hashed)
+    new_user = User(
+        email=email,
+        password=hashed,
+        role=assigned_active_role,
+        requested_role=req_role_val,
+        approval_status=approval_status_val
+    )
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
 
+    # Initialize basic profile without fake verification data
+    is_ret = (assigned_active_role == UserRole.RETAINER.value)
+    initial_profile = Profile(
+        user_id=new_user.id,
+        full_name=email.split("@")[0].capitalize(),
+        phone_number="+91 98000 00000",
+        street_address="Street 101, Main Road",
+        city="Mumbai",
+        state="Maharashtra",
+        postal_code="400001",
+        country="India",
+        business_name=f"{email.split('@')[0].capitalize()} Retail Ltd" if is_ret else None,
+        is_verified=False
+    )
+    db.add(initial_profile)
+    db.commit()
+
     token = create_access_token(new_user.id)
     csrf_token = generate_csrf_token()
-    response = RedirectResponse("/",303)
+
+    if approval_status_val == ApprovalStatus.PENDING.value:
+        flash(request, f"Registration submitted! Your request for '{req_role_val}' privileges is pending Admin approval.", "info")
+        target_url = "/account/status"
+    else:
+        flash(request, f"Welcome! Your {assigned_active_role} account has been created successfully.", "success")
+        target_url = "/"
+
+    response = RedirectResponse(target_url, 303)
     response.set_cookie("access_token",token,httponly=True,samesite="lax")
     response.set_cookie(key="csrf_token",value=csrf_token,httponly=False,samesite="lax",secure=True,path="/")
     return response
@@ -248,13 +383,20 @@ def update_password(request:Request,email:str=Form(...),otp:str=Form(...),passwo
 
 @app.get("/addproduct",tags=["Add product endpoint"])
 def addproducts_page(request:Request,current_user:User = Depends(user_authentication)):
-    response= templates.TemplateResponse("addproduct.html",{"request":request,"user_id":current_user.id})
+    if current_user.role not in [UserRole.ADMIN.value, UserRole.RETAINER.value]:
+        flash(request, "Only Admin or Retainer can add products", "error")
+        return RedirectResponse("/", status_code=303)
+    response= templates.TemplateResponse("addproduct.html",{"request":request,"user_id":current_user.id,"user":current_user})
     return no_cache(response)
 
 @app.post("/add-product", tags=["Add product endpoint"])
 def addproduct(request: Request,title: Optional[str] = Form(None),description: Optional[str] = Form(None),price: Optional[float] = Form(None),discount: Optional[float] = Form(None),image: Optional[UploadFile] = File(None),category: Optional[str] = Form(None),quantity:Optional[int] = Form(None),current_user: Optional[User] = Depends(user_authentication),db: Session = Depends(get_db),csrf=Depends(csrf_protect)):
     if not current_user:
         return RedirectResponse("/login", status_code=303)
+
+    if current_user.role not in [UserRole.ADMIN.value, UserRole.RETAINER.value]:
+        flash(request, "Access denied: Only Admin or Retainer can add products", "error")
+        return RedirectResponse("/", status_code=303)
 
     if not all([title, description, category, image]) or price is None or discount is None:
         message = "All fields are required"
@@ -280,7 +422,16 @@ def addproduct(request: Request,title: Optional[str] = Form(None),description: O
     with open(image_path, "wb") as buffer:
         shutil.copyfileobj(image.file, buffer)
 
-    new_product = Products(title=title.strip(),description=description.strip(),price=price,discount=discount,image=image_path,category=category.strip(),stock_quantity=quantity)
+    new_product = Products(
+        title=title.strip(),
+        description=description.strip(),
+        price=price,
+        discount=discount,
+        image=image_path,
+        category=category.strip(),
+        stock_quantity=quantity,
+        created_by_id=current_user.id
+    )
 
     db.add(new_product)
     db.commit()
@@ -292,6 +443,10 @@ def addproduct(request: Request,title: Optional[str] = Form(None),description: O
 @app.post("/order",tags=["Order product endpoint"])
 def create_order(request:Request,product_id : int =Form(...),quantity:int = Form(...),current_user: User = Depends(user_authentication),db:Session=Depends(get_db)):
     
+    if current_user.role != UserRole.USER.value:
+        flash(request, f"Accounts with role '{current_user.role}' cannot place orders. Only standard users can buy products.", "error")
+        return RedirectResponse(url="/",status_code=303)
+
     product=db.query(Products).filter(Products.p_id==product_id).first()
     if not product :
         return RedirectResponse(url="/",status_code=303)
@@ -320,10 +475,10 @@ def create_order(request:Request,product_id : int =Form(...),quantity:int = Form
     if existing_order :
         return RedirectResponse(url="/",status_code=303)
 
-    discounted_price = product.price - (product.price * product.discount) /100 
-    total_price= quantity * discounted_price
+    discounted_price = round(product.price - (product.price * product.discount) / 100)
+    total_price = round(quantity * discounted_price)
 
-    order=Order(c_id=current_user.id,p_id=product.p_id,total_price=total_price,payment_status="pending",is_delivered = False ,quantity=quantity)
+    order=Order(c_id=current_user.id,p_id=product.p_id,total_price=int(total_price),payment_status="pending",is_delivered = False ,quantity=quantity)
 
     db.add(order)
     db.commit()
@@ -333,6 +488,10 @@ def create_order(request:Request,product_id : int =Form(...),quantity:int = Form
 
 @app.post("/checkout/start")
 def start_checkout(request: Request,current_user: User = Depends(user_authentication),db: Session = Depends(get_db)):
+    if current_user.role != UserRole.USER.value:
+        flash(request, f"Accounts with role '{current_user.role}' cannot checkout. Only customers can buy products.", "error")
+        return RedirectResponse("/", status_code=303)
+
     orders = db.query(Order).filter(Order.c_id == current_user.id,Order.payment_status == "pending").first()
 
     if not orders:
@@ -352,11 +511,29 @@ def payment_page(request: Request,current_user: User = Depends(user_authenticati
     if not orders:
         return RedirectResponse("/", status_code=303)
 
-    total_amount = round(sum(o.total_price for o in orders), 2)
+    total_amount = round(sum(o.total_price for o in orders))
 
-    intent = stripe.PaymentIntent.create(amount=int(total_amount * 100),currency="inr",automatic_payment_methods={"enabled": True},metadata={"user_id": current_user.id})
+    stripe_pk = os.getenv("STRIPE_PUBLISHABLE_KEY")
+    if not stripe_pk and os.getenv("STRIPE_SECRET_KEY"):
+        stripe_pk = os.getenv("STRIPE_SECRET_KEY").replace("sk_test_", "pk_test_").replace("sk_live_", "pk_live_")
 
-    response = templates.TemplateResponse("payment.html",{"request": request,"total_amount": total_amount,"client_secret": intent.client_secret,"stripe_pk": os.getenv("STRIPE_PUBLISHABLE_KEY")})
+    try:
+        intent = stripe.PaymentIntent.create(
+            amount=int(total_amount * 100),
+            currency="inr",
+            automatic_payment_methods={"enabled": True, "allow_redirects": "never"},
+            metadata={"user_id": current_user.id}
+        )
+        client_secret = intent.client_secret
+    except Exception as e:
+        client_secret = ""
+
+    response = templates.TemplateResponse("payment.html",{
+        "request": request,
+        "total_amount": total_amount,
+        "client_secret": client_secret,
+        "stripe_pk": stripe_pk
+    })
 
     return no_cache(response)
 
@@ -415,11 +592,11 @@ def order(request:Request,user_id:int,current_user:User=Depends(user_authenticat
     response = [] 
 
     for o,p in orders :
-       response.append(OrderResponse(o_id = o.o_id,p_id=p.p_id,title=p.title,description=p.description,total_price=o.total_price,quantity=o.quantity,is_delivered=o.is_delivered,payment_status=None if o.payment_status == "pending" else o.payment_status))
+       response.append(OrderResponse(o_id = o.o_id,p_id=p.p_id,title=p.title,description=p.description,total_price=round(o.total_price),quantity=o.quantity,is_delivered=o.is_delivered,payment_status=None if o.payment_status == "pending" else o.payment_status))
     
     flash_message = request.session.pop("flash", None)
 
-    response= templates.TemplateResponse("second.html",{"request":request,"response":response,"order":orders,"user_id":user_id,"flash": flash_message})
+    response= templates.TemplateResponse("second.html",{"request":request,"response":response,"order":orders,"user_id":user_id,"user":current_user,"flash": flash_message})
     return no_cache(response)
 
 @app.post("/orders/cancel/{o_id}", tags=["Cancel order"])
@@ -439,10 +616,20 @@ def cancel_order(request:Request,o_id: int,current_user: User = Depends(user_aut
 
 @app.put("/updatedeliver/{productid}")
 def update_delivery(request: Request,productid: int,current_user: User = Depends(user_authentication),db: Session = Depends(get_db)):
-    order_update = db.query(Order).filter(Order.p_id == productid,Order.c_id == current_user.id,Order.is_delivered == False,or_(Order.payment_status == "COD",Order.payment_status == "PAID")).first()
+    if current_user.role not in [UserRole.DELIVERY.value, UserRole.ADMIN.value]:
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Customers cannot mark orders as delivered. Deliveries must be confirmed by a delivery agent."
+        )
+
+    order_update = db.query(Order).filter(
+        Order.p_id == productid,
+        Order.is_delivered == False,
+        or_(Order.payment_status == "COD", Order.payment_status == "PAID")
+    ).first()
      
     if not order_update :
-        raise HTTPException(status_code=404,detail="Order already delivered ")
+        raise HTTPException(status_code=404,detail="Order already delivered or not found")
     order_update.is_delivered = True
     db.commit()
     db.refresh(order_update)
@@ -459,9 +646,9 @@ def product_manager(request:Request,user_id:int,current_user:User = Depends(user
     pro=db.query(Order,Products).join(Products,Order.p_id==Products.p_id).filter(Order.c_id==current_user.id).all()
     response=[]
     for o,p in pro :
-        response.append(ProductManger(p_id=p.p_id,title=p.title,price=p.price,quantity=o.quantity,discount=p.discount,total_price=o.total_price))
+        response.append(ProductManger(p_id=p.p_id,title=p.title,price=p.price,quantity=o.quantity,discount=p.discount,total_price=round(o.total_price)))
     flash_message = request.session.pop("flash", None)
-    response= templates.TemplateResponse("product_manager.html",{"request":request,"user_id":current_user.id,"pro":response,"flash": flash_message})
+    response= templates.TemplateResponse("product_manager.html",{"request":request,"user_id":current_user.id,"user":current_user,"pro":response,"flash": flash_message})
     return no_cache(response)
    
 
@@ -473,18 +660,28 @@ def get_category(request:Request,user_id:int,current_user=Depends(user_authentic
     product_category=db.query(Order,Products).join(Products,Order.p_id==Products.p_id).filter(Order.c_id==user_id).all()
     response=[]
     for o,p in product_category:
-        response.append(ProductCategory(title=p.title,category=p.category,discount=p.discount,total_price=o.total_price))
+        response.append(ProductCategory(title=p.title,category=p.category,discount=p.discount,total_price=round(o.total_price)))
     flash_message = request.session.pop("flash", None)
-    response= templates.TemplateResponse("category.html",{"request":request,"user_id":current_user.id,"response":response,"flash": flash_message})
+    response= templates.TemplateResponse("category.html",{"request":request,"user_id":current_user.id,"user":current_user,"response":response,"flash": flash_message})
     return no_cache(response)
 
 @app.get("/updatediscount" , tags=["update discount endpoint"])
 def updatediscount(request:Request,current_user=Depends(user_authentication)):
-    response = templates.TemplateResponse("Discount.html",{"request":request })
+    if getattr(current_user, "approval_status", "approved") != ApprovalStatus.APPROVED.value:
+        return RedirectResponse("/account/status", status_code=303)
+    if current_user.role != UserRole.ADMIN.value:
+        flash(request, "Access denied: Only Admin can update discounts", "error")
+        return RedirectResponse("/", status_code=303)
+    response = templates.TemplateResponse("Discount.html",{"request":request, "user": current_user})
     return no_cache(response)
 
 @app.post("/updatediscount" , tags=["update discount endpoint"])
 def updatediscount(request:Request,product_id:int=Form(...), discount:int=Form(...),current_user=Depends(user_authentication),db:Session=Depends(get_db),csrf=Depends(csrf_protect)):
+    if getattr(current_user, "approval_status", "approved") != ApprovalStatus.APPROVED.value:
+        return RedirectResponse("/account/status", status_code=303)
+    if current_user.role != UserRole.ADMIN.value:
+        flash(request, "Access denied: Only Admin can update discounts", "error")
+        return RedirectResponse("/", status_code=303)
     exisiting = db.query(Products).filter(Products.p_id==product_id).first()
     if exisiting is None:
         message="No product found"
@@ -500,6 +697,248 @@ def updatediscount(request:Request,product_id:int=Form(...), discount:int=Form(.
     db.refresh(exisiting)   
     flash(request, "Discount updated successfully", "success")
     return RedirectResponse(url="/",status_code=303)
+
+@app.get("/admin/profiles", tags=["Admin and Viewer Profiles"])
+def view_profiles(request: Request, current_user: User = Depends(user_authentication), db: Session = Depends(get_db)):
+    if getattr(current_user, "approval_status", "approved") != ApprovalStatus.APPROVED.value:
+        return RedirectResponse("/account/status", status_code=303)
+    if current_user.role not in [UserRole.ADMIN.value, UserRole.VIEWER.value]:
+        flash(request, "Access denied: Only Admin and Viewer can access user & retainer profiles", "error")
+        return RedirectResponse("/", status_code=303)
+    
+    users = db.query(User).order_by(User.id.asc()).all()
+    user_profiles = [u for u in users if u.role != UserRole.RETAINER.value]
+    retainer_profiles = [u for u in users if u.role == UserRole.RETAINER.value]
+    
+    # Map products added by each retainer
+    retainer_products = {}
+    for ret in retainer_profiles:
+        prods = db.query(Products).filter(Products.created_by_id == ret.id).all()
+        retainer_products[ret.id] = prods
+
+    flash_message = request.session.pop("flash", None)
+    return templates.TemplateResponse("profiles.html", {
+        "request": request,
+        "user": current_user,
+        "users": user_profiles,
+        "retainers": retainer_profiles,
+        "retainer_products": retainer_products,
+        "all_users": users,
+        "flash": flash_message
+    })
+
+@app.get("/admin/role-requests", tags=["Admin Role Approvals"])
+def list_role_requests(request: Request, current_user: User = Depends(require_roles(UserRole.ADMIN)), db: Session = Depends(get_db)):
+    pending_requests = (
+        db.query(User)
+        .filter(User.approval_status == ApprovalStatus.PENDING.value)
+        .order_by(User.id.desc())
+        .all()
+    )
+    resolved_requests = (
+        db.query(User)
+        .filter(User.approval_status != ApprovalStatus.PENDING.value, User.requested_role != None)
+        .order_by(User.id.desc())
+        .limit(30)
+        .all()
+    )
+    flash_message = request.session.pop("flash", None)
+    return templates.TemplateResponse("role_requests.html", {
+        "request": request,
+        "current_admin": current_user,
+        "pending_requests": pending_requests,
+        "resolved_requests": resolved_requests,
+        "flash": flash_message
+    })
+
+@app.post("/admin/role-requests/{user_id}/approve", tags=["Admin Role Approvals"])
+def approve_role_request(request: Request, user_id: int, current_user: User = Depends(require_roles(UserRole.ADMIN)), db: Session = Depends(get_db), csrf=Depends(csrf_protect)):
+    target_user = db.query(User).filter(User.id == user_id).first()
+    if not target_user:
+        flash(request, "Applicant not found", "error")
+        return RedirectResponse("/admin/role-requests", 303)
+
+    if target_user.approval_status != ApprovalStatus.PENDING.value:
+        flash(request, f"Request for {target_user.email} is not pending", "error")
+        return RedirectResponse("/admin/role-requests", 303)
+
+    valid_roles = [r.value for r in UserRole]
+    if target_user.requested_role and target_user.requested_role in valid_roles:
+        target_user.role = target_user.requested_role
+    target_user.approval_status = ApprovalStatus.APPROVED.value
+
+    db.commit()
+    flash(request, f"Approved role '{target_user.role}' for {target_user.email} successfully!", "success")
+    return RedirectResponse("/admin/role-requests", 303)
+
+@app.post("/admin/role-requests/{user_id}/reject", tags=["Admin Role Approvals"])
+def reject_role_request(request: Request, user_id: int, current_user: User = Depends(require_roles(UserRole.ADMIN)), db: Session = Depends(get_db), csrf=Depends(csrf_protect)):
+    target_user = db.query(User).filter(User.id == user_id).first()
+    if not target_user:
+        flash(request, "Applicant not found", "error")
+        return RedirectResponse("/admin/role-requests", 303)
+
+    if target_user.approval_status != ApprovalStatus.PENDING.value:
+        flash(request, f"Request for {target_user.email} is not pending", "error")
+        return RedirectResponse("/admin/role-requests", 303)
+
+    target_user.role = UserRole.USER.value
+    target_user.approval_status = ApprovalStatus.REJECTED.value
+
+    db.commit()
+    flash(request, f"Rejected role request for {target_user.email}. Account kept as standard customer.", "error")
+    return RedirectResponse("/admin/role-requests", 303)
+
+@app.get("/delivery/orders", tags=["Delivery Agent Dashboard"])
+def delivery_dashboard(request: Request, current_user: User = Depends(user_authentication), db: Session = Depends(get_db)):
+    if current_user.role not in [UserRole.DELIVERY.value, UserRole.ADMIN.value]:
+        flash(request, "Access restricted: Only Delivery agents or Admins can access deliveries", "error")
+        return RedirectResponse("/", status_code=303)
+
+    # Orders yet to be delivered (pending delivery, but confirmed via PAID or COD)
+    pending_deliveries = (
+        db.query(Order)
+        .filter(Order.is_delivered == False, Order.payment_status.in_(["PAID", "COD"]))
+        .order_by(Order.o_id.desc())
+        .all()
+    )
+
+    # Completed deliveries (already delivered)
+    completed_deliveries = (
+        db.query(Order)
+        .filter(Order.is_delivered == True)
+        .order_by(Order.o_id.desc())
+        .limit(20)
+        .all()
+    )
+
+    flash_message = request.session.pop("flash", None)
+    return templates.TemplateResponse("delivery_dashboard.html", {
+        "request": request,
+        "user": current_user,
+        "pending_deliveries": pending_deliveries,
+        "completed_deliveries": completed_deliveries,
+        "flash": flash_message
+    })
+
+@app.post("/delivery/mark-delivered/{order_id}", tags=["Delivery Agent Dashboard"])
+def mark_order_delivered(request: Request, order_id: int, current_user: User = Depends(user_authentication), db: Session = Depends(get_db)):
+    if current_user.role not in [UserRole.DELIVERY.value, UserRole.ADMIN.value]:
+        flash(request, "Only Delivery personnel can confirm delivery", "error")
+        return RedirectResponse("/", status_code=303)
+
+    order = db.query(Order).filter(Order.o_id == order_id).first()
+    if not order:
+        flash(request, "Order not found", "error")
+        return RedirectResponse("/delivery/orders", status_code=303)
+
+    order.is_delivered = True
+    db.commit()
+    flash(request, f"Order #{order_id} marked as delivered successfully!", "success")
+    return RedirectResponse("/delivery/orders", status_code=303)
+
+@app.get("/viewer/orders", tags=["Viewer and Admin Orders Audit"])
+def view_all_orders(request: Request, current_user: User = Depends(user_authentication), db: Session = Depends(get_db)):
+    if current_user.role not in [UserRole.ADMIN.value, UserRole.VIEWER.value]:
+        flash(request, "Access denied: Only Viewer and Admin can trace all orders", "error")
+        return RedirectResponse("/", status_code=303)
+    
+    orders = (
+        db.query(Order, Products, User)
+        .join(Products, Order.p_id == Products.p_id)
+        .outerjoin(User, Order.c_id == User.id)
+        .order_by(Order.o_id.desc())
+        .all()
+    )
+    
+    flash_message = request.session.pop("flash", None)
+    return templates.TemplateResponse("all_orders.html", {
+        "request": request,
+        "user": current_user,
+        "orders": orders,
+        "flash": flash_message
+    })
+
+@app.get("/profile", tags=["User Profile"])
+def get_user_profile(request: Request, current_user: User = Depends(user_authentication), db: Session = Depends(get_db)):
+    profile = db.query(Profile).filter(Profile.user_id == current_user.id).first()
+    if not profile:
+        profile = Profile(
+            user_id=current_user.id,
+            full_name=current_user.email.split("@")[0].capitalize(),
+            phone_number="+91 98000 00000",
+            street_address="Street 101, Main Road",
+            city="Mumbai",
+            state="Maharashtra",
+            postal_code="400001",
+            country="India",
+            card_brand="Visa",
+            card_holder_name=current_user.email.split("@")[0].upper(),
+            card_last4=str(random.randint(1000, 9999)),
+            card_exp="12/28"
+        )
+        db.add(profile)
+        db.commit()
+        db.refresh(profile)
+
+    flash_message = request.session.pop("flash", None)
+    response = templates.TemplateResponse("user_profile.html", {
+        "request": request,
+        "user": current_user,
+        "profile": profile,
+        "user_id": current_user.id,
+        "flash": flash_message
+    })
+    return no_cache(response)
+
+@app.post("/profile/update", tags=["User Profile"])
+def update_user_profile(
+    request: Request,
+    full_name: str = Form(...),
+    phone_number: str = Form(...),
+    street_address: str = Form(...),
+    city: str = Form(...),
+    state: str = Form(...),
+    postal_code: str = Form(...),
+    card_brand: str = Form("Visa"),
+    card_holder_name: str = Form(...),
+    card_last4: str = Form("4242"),
+    card_exp: str = Form("12/28"),
+    business_name: Optional[str] = Form(None),
+    gstin_id: Optional[str] = Form(None),
+    pan_id: Optional[str] = Form(None),
+    current_user: User = Depends(user_authentication),
+    db: Session = Depends(get_db),
+    csrf: None = Depends(csrf_protect)
+):
+    profile = db.query(Profile).filter(Profile.user_id == current_user.id).first()
+    if not profile:
+        profile = Profile(user_id=current_user.id)
+        db.add(profile)
+
+    profile.full_name = full_name.strip()
+    profile.phone_number = phone_number.strip()
+    profile.street_address = street_address.strip()
+    profile.city = city.strip()
+    profile.state = state.strip()
+    profile.postal_code = postal_code.strip()
+
+    # Masked simulated card details
+    profile.card_brand = card_brand.strip()
+    profile.card_holder_name = card_holder_name.strip()
+    profile.card_last4 = card_last4.strip()[-4:] if len(card_last4.strip()) >= 4 else "4242"
+    profile.card_exp = card_exp.strip()
+
+    # Retailer fields
+    if current_user.role == UserRole.RETAINER.value:
+        profile.business_name = business_name.strip() if business_name else None
+        profile.gstin_id = gstin_id.strip() if gstin_id else None
+        profile.pan_id = pan_id.strip() if pan_id else None
+        profile.is_verified = bool(profile.gstin_id and profile.pan_id)
+
+    db.commit()
+    flash(request, "Profile updated successfully!", "success")
+    return RedirectResponse(f"/profile", status_code=303)
 
 @app.post("/add-review",tags=["Review"])
 def add_review(request:Request,product_id:int=Form(...),rating:int=Form(...),comment:str=Form(...),current_user:User=Depends(user_authentication),db:Session=Depends(get_db),csrf=Depends(csrf_protect)):

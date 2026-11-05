@@ -4,6 +4,20 @@ from pydantic import BaseModel , EmailStr
 from typing import Optional
 from sqlalchemy.sql import func
 import datetime
+from enum import Enum
+
+
+class UserRole(str, Enum):
+    ADMIN = "admin"
+    VIEWER = "viewer"
+    USER = "user"
+    RETAINER = "retainer"
+    DELIVERY = "delivery"
+
+class ApprovalStatus(str, Enum):
+    APPROVED = "approved"
+    PENDING = "pending"
+    REJECTED = "rejected"
 
 DATABASE_URL = "sqlite:///./data/test.db"
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
@@ -17,6 +31,39 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String, unique=True, index=True)
     password=Column(String, nullable=False)
+    role = Column(String, default=UserRole.USER.value, nullable=False)
+    requested_role = Column(String, nullable=True)
+    approval_status = Column(String, default=ApprovalStatus.APPROVED.value, nullable=False)
+    profile = relationship("Profile", back_populates="user", uselist=False, cascade="all, delete-orphan")
+
+
+class Profile(Base):
+    __tablename__ = "profiles"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False)
+
+    # Personal Identifiable Information (PII)
+    full_name = Column(String, nullable=True)
+    phone_number = Column(String, nullable=True)
+    street_address = Column(String, nullable=True)
+    city = Column(String, nullable=True)
+    state = Column(String, nullable=True)
+    postal_code = Column(String, nullable=True)
+    country = Column(String, default="India")
+
+    # Retailer / Vendor Verification
+    business_name = Column(String, nullable=True)
+    gstin_id = Column(String, nullable=True)              # Fake GSTIN/Govt Vendor ID
+    pan_id = Column(String, nullable=True)                # Fake PAN/National ID
+    is_verified = Column(Boolean, default=False)          # Verification Status
+
+    # Simulated Card Information (Safe masked PCI-DSS simulation)
+    card_brand = Column(String, default="Visa")          # Visa, Mastercard, RuPay
+    card_holder_name = Column(String, nullable=True)
+    card_last4 = Column(String(4), default="4242")
+    card_exp = Column(String(5), default="12/28")
+
+    user = relationship("User", back_populates="profile")
 
 
 class Products(Base):
@@ -29,6 +76,8 @@ class Products(Base):
     image=Column(String,nullable=False)
     category=Column(String,nullable=False)
     stock_quantity=Column(Integer,nullable=False,default=100)
+    created_by_id=Column(Integer, ForeignKey("users.id"), nullable=True)
+    creator = relationship("User", foreign_keys=[created_by_id])
 
 class Order(Base):
     __tablename__ = "orders"
@@ -39,6 +88,8 @@ class Order(Base):
     is_delivered=Column(Boolean,default=False)
     payment_status=Column(String, nullable=False, default="pending")
     quantity=Column(Integer,nullable=False)
+    customer = relationship("User", foreign_keys=[c_id])
+    product = relationship("Products", foreign_keys=[p_id])
     payment = relationship("Payment", back_populates="order", uselist=False)
 
 class Transactions(Base):

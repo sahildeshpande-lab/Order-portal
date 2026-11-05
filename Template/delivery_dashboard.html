@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delivery Agent Dashboard - Pending Deliveries</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="{{ url_for('static', path='/style.css') }}" rel="stylesheet">
+    <style>
+        body { font-family: 'Poppins', sans-serif; background: #f7f8fa; margin: 0; padding: 20px 40px; color: #2d3748; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 12px; border-bottom: 1px solid #e2e8f0; }
+        .card { background: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 20px; margin-bottom: 30px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 14px 16px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 14px; vertical-align: middle; }
+        th { background: #f8fafc; font-weight: 600; color: #4a5568; }
+        tr:hover { background: #f8fafc; }
+        .back-btn { background: #2b6cb0; color: #fff; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-size: 14px; }
+        .btn-deliver {
+            background: #27ae60; color: #fff; border: none; padding: 8px 14px;
+            border-radius: 6px; font-weight: 600; font-size: 13px; cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-deliver:hover { background: #219150; }
+        .badge-cod { background: #feebc8; color: #7c2d12; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+        .badge-paid { background: #c6f6d5; color: #22543d; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+
+        /* Hover Tooltip for Customer Address & Payment */
+        .hover-target {
+            position: relative;
+            cursor: pointer;
+            text-decoration: underline dotted #4a5568;
+            font-weight: 600;
+        }
+        .hover-target .tooltip-content {
+            visibility: hidden;
+            opacity: 0;
+            width: 290px;
+            background-color: #1a202c;
+            color: #fff;
+            text-align: left;
+            border-radius: 8px;
+            padding: 12px;
+            position: absolute;
+            z-index: 100;
+            top: 130%;
+            left: 0;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+            transition: opacity 0.2s, visibility 0.2s;
+            font-size: 12px;
+            font-weight: normal;
+            line-height: 1.5;
+        }
+        .hover-target .tooltip-content::after {
+            content: "";
+            position: absolute;
+            bottom: 100%;
+            left: 20px;
+            border-width: 6px;
+            border-style: solid;
+            border-color: transparent transparent #1a202c transparent;
+        }
+        .hover-target:hover .tooltip-content {
+            visibility: visible;
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <h1>🚚 Delivery Agent Dispatch Portal</h1>
+            <p style="margin: 4px 0 0; color: #718096; font-size: 13px;">Logged in as: <strong>{{ user.email }}</strong> (Role: Delivery Agent)</p>
+        </div>
+        <div>
+            <a href="/" class="back-btn">← Back to Portal</a>
+            <a href="/logout" class="back-btn" style="background: #e53e3e; margin-left: 8px;">Logout</a>
+        </div>
+    </div>
+
+    {% if flash %}
+    <div style="background: #c6f6d5; color: #22543d; padding: 12px 18px; border-radius: 6px; margin-bottom: 20px; font-size: 14px;">
+        {{ flash.message }}
+    </div>
+    {% endif %}
+
+    <div class="card">
+        <h2>📦 Orders Yet to be Delivered ({{ pending_deliveries|length }})</h2>
+        <p style="color: #718096; font-size: 13px; margin-top: -8px; margin-bottom: 16px;">
+            💡 <em>Hover over the customer name to see the full delivery address, contact number, and payment collection instructions.</em>
+        </p>
+
+        {% if pending_deliveries %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Order #</th>
+                    <th>Customer Name (Hover for Address)</th>
+                    <th>Product</th>
+                    <th>Qty</th>
+                    <th>Amount to Collect / Paid</th>
+                    <th>Payment Method</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in pending_deliveries %}
+                {% set cust = order.customer %}
+                {% set prof = cust.profile if cust else None %}
+                <tr>
+                    <td><strong>#{{ order.o_id }}</strong></td>
+                    <td>
+                        <span class="hover-target">
+                            {{ prof.full_name if prof and prof.full_name else (cust.email.split('@')[0].capitalize() if cust else "Customer") }}
+                            <div class="tooltip-content">
+                                <div style="font-weight: 600; color: #ecc94b; margin-bottom: 4px; border-bottom: 1px solid #4a5568; padding-bottom: 4px;">
+                                    📍 Delivery Address & Contact
+                                </div>
+                                <div><strong>Phone:</strong> {{ prof.phone_number if prof else "+91 98000 00000" }}</div>
+                                <div><strong>Email:</strong> {{ cust.email if cust else "N/A" }}</div>
+                                <div><strong>Address:</strong> {{ prof.street_address if prof else "Main Street 101" }}</div>
+                                <div><strong>City/State:</strong> {{ prof.city if prof else "Mumbai" }}, {{ prof.state if prof else "Maharashtra" }}</div>
+                                <div><strong>Postal Code:</strong> {{ prof.postal_code if prof else "400001" }}</div>
+                                <div style="margin-top: 6px; padding-top: 4px; border-top: 1px solid #4a5568;">
+                                    <strong>Payment Info:</strong> 
+                                    {% if order.payment_status == 'COD' %}
+                                        <span style="color: #feb2b2;">Collect Cash ₹{{ order.total_price }}</span>
+                                    {% else %}
+                                        <span style="color: #9ae6b4;">Prepaid (PAID via Online Card)</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </span>
+                    </td>
+                    <td>{{ order.product.title if order.product else "Item #" ~ order.p_id }}</td>
+                    <td>{{ order.quantity }}</td>
+                    <td><strong>₹{{ order.total_price }}</strong></td>
+                    <td>
+                        {% if order.payment_status == 'COD' %}
+                            <span class="badge-cod">💵 Cash on Delivery (Collect Cash)</span>
+                        {% else %}
+                            <span class="badge-paid">✓ Prepaid Online</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <form method="post" action="/delivery/mark-delivered/{{ order.o_id }}">
+                            <input type="hidden" name="csrf_token" value="{{ request.cookies.csrf_token }}">
+                            <button type="submit" class="btn-deliver">✓ Mark Delivered</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p style="color: #a0aec0; text-align: center; padding: 40px 0;">🎉 All caught up! No pending deliveries right now.</p>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <h2>✓ Recently Delivered Orders</h2>
+        {% if completed_deliveries %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Order #</th>
+                    <th>Customer</th>
+                    <th>Product</th>
+                    <th>Total</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in completed_deliveries %}
+                {% set cust = order.customer %}
+                {% set prof = cust.profile if cust else None %}
+                <tr>
+                    <td>#{{ order.o_id }}</td>
+                    <td>{{ prof.full_name if prof and prof.full_name else (cust.email if cust else "Customer") }}</td>
+                    <td>{{ order.product.title if order.product else "Item" }}</td>
+                    <td>₹{{ order.total_price }}</td>
+                    <td><span style="color: #27ae60; font-weight: 600;">✓ Delivered</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+    </div>
+</body>
+</html>

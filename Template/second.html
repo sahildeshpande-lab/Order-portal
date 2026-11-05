@@ -17,6 +17,14 @@
                 <li class="active"><a href="#">Order Manager</a></li>
                 <li><a href="/products/get-orders/{{user_id}}/productmanager">Product Management</a></li>
                 <li><a href="/products/get-orders/{{user_id}}/category">Category</a></li>
+                <li><a href="/profile">My Profile</a></li>
+                {% if user and user.role in ['delivery', 'admin'] %}
+                <li><a href="/delivery/orders" style="color: #27ae60; font-weight: 600;">🚚 Deliveries</a></li>
+                {% endif %}
+                {% if user and user.role in ['admin', 'viewer'] %}
+                <li><a href="/admin/profiles">User & Retainer Profiles</a></li>
+                <li><a href="/viewer/orders">Audit All Orders</a></li>
+                {% endif %}
             </ul>
 
             <div class="sidebar-footer">
@@ -52,7 +60,7 @@
                             <td>{{ res.title }}</td>
                             <td>{{ res.description }}</td>
                             <td>{{ res.quantity }}</td>
-                            <td class="total-price">₹{{ res.total_price }}</td>
+                            <td class="total-price">₹{{ res.total_price|round|int }}</td>
 
                             <td class="payment-cell">
                                 {% if res.payment_status is none %}
@@ -72,6 +80,7 @@
                             </td>
 
                             <td>
+                                {% if user and user.role in ['delivery', 'admin'] %}
                                 <button class="delivery-status {{ 'delivered' if res.is_delivered else 'pending' }}"
                                     {% if res.is_delivered %} 
                                         disabled 
@@ -79,7 +88,11 @@
                                     onclick="updateDelivery(this, '{{ res.p_id }}')">
                                     {{ 'Delivered' if res.is_delivered else 'Pending' }}
                                 </button>
-
+                                {% else %}
+                                <span class="delivery-status {{ 'delivered' if res.is_delivered else 'pending' }}" style="cursor: default; display: inline-block;">
+                                    {{ 'Delivered' if res.is_delivered else 'Pending' }}
+                                </span>
+                                {% endif %}
                             </td>
 
                         </tr>

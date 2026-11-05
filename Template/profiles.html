@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profiles Directory - Admin & Viewer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="{{ url_for('static', path='/style.css') }}" rel="stylesheet">
+    <style>
+        body { font-family: 'Poppins', sans-serif; background: #f7f8fa; margin: 0; padding: 20px 40px; color: #2d3748; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 12px; border-bottom: 1px solid #e2e8f0; }
+        .header h1 { margin: 0; font-size: 24px; }
+        .back-btn { background: #2b6cb0; color: #fff; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-size: 14px; }
+        .role-badge { display: inline-block; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
+        .role-admin { background: #fed7d7; color: #9b2c2c; }
+        .role-retainer { background: #feebc8; color: #7c2d12; }
+        .role-user { background: #c6f6d5; color: #22543d; }
+        .role-viewer { background: #e9d8fd; color: #44337a; }
+        .card { background: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 20px; margin-bottom: 30px; }
+        .card h2 { margin-top: 0; font-size: 18px; margin-bottom: 16px; border-bottom: 2px solid #edf2f7; padding-bottom: 8px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px 14px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
+        th { background: #f8fafc; font-weight: 600; color: #4a5568; }
+        tr:hover { background: #f8fafc; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <h1>User & Retainer Profiles</h1>
+            <p style="margin: 4px 0 0; color: #718096; font-size: 13px;">Logged in as: <strong>{{ user.email }}</strong> (<span class="role-badge role-{{ user.role }}">{{ user.role }}</span>)</p>
+        </div>
+        <div>
+            {% if user.role == 'admin' %}
+            <a href="/admin/role-requests" class="back-btn" style="background: #9b2c2c; margin-right: 8px;">📋 Role Requests</a>
+            {% endif %}
+            <a href="/viewer/orders" class="back-btn" style="background: #4a5568; margin-right: 8px;">View All Orders</a>
+            <a href="/" class="back-btn">← Back to Portal</a>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Retainer Profiles (Vendors) & ID Verification</h2>
+        {% if retainers %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Vendor ID</th>
+                    <th>Business / Contact</th>
+                    <th>Govt ID Verification</th>
+                    <th>Location</th>
+                    <th>Products Added</th>
+                    <th>Catalog Details</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in retainers %}
+                {% set prods = retainer_products.get(r.id, []) %}
+                {% set prof = r.profile %}
+                <tr>
+                    <td>#{{ r.id }}</td>
+                    <td>
+                        <strong>{{ prof.business_name if prof and prof.business_name else r.email }}</strong><br>
+                        <span style="font-size: 12px; color: #718096;">Contact: {{ prof.full_name if prof else "N/A" }} ({{ prof.phone_number if prof else r.email }})</span>
+                    </td>
+                    <td>
+                        {% if prof and prof.is_verified %}
+                            <span style="display: inline-block; background: #c6f6d5; color: #22543d; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600;">✓ ID VERIFIED</span><br>
+                            <span style="font-size: 11px; color: #4a5568;">GSTIN: <code>{{ prof.gstin_id }}</code></span><br>
+                            <span style="font-size: 11px; color: #4a5568;">PAN: <code>{{ prof.pan_id }}</code></span>
+                        {% else %}
+                            <span style="display: inline-block; background: #feebc8; color: #7c2d12; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600;">⚠ UNVERIFIED</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span style="font-size: 12px;">{{ prof.city if prof else "N/A" }}, {{ prof.state if prof else "" }}</span>
+                    </td>
+                    <td><strong style="color: #2b6cb0;">{{ prods|length }}</strong> products</td>
+                    <td>
+                        {% if prods %}
+                        <details style="cursor: pointer;">
+                            <summary style="color: #2b6cb0; font-size: 13px; font-weight: 500;">
+                                View {{ prods|length }} products
+                            </summary>
+                            <div style="margin-top: 10px; max-height: 240px; overflow-y: auto; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px;">
+                                <table style="font-size: 12px; margin: 0;">
+                                    <thead>
+                                        <tr style="background: #edf2f7;">
+                                            <th style="padding: 6px 10px;">ID</th>
+                                            <th style="padding: 6px 10px;">Product Name</th>
+                                            <th style="padding: 6px 10px;">Category</th>
+                                            <th style="padding: 6px 10px;">Price</th>
+                                            <th style="padding: 6px 10px;">Stock</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for p in prods %}
+                                        <tr>
+                                            <td style="padding: 6px 10px;">#{{ p.p_id }}</td>
+                                            <td style="padding: 6px 10px;">
+                                                <a href="/product/{{ p.p_id }}" target="_blank" style="color: #2d3748; font-weight: 500; text-decoration: none;">
+                                                    {{ p.title }} ↗
+                                                </a>
+                                            </td>
+                                            <td style="padding: 6px 10px;">{{ p.category }}</td>
+                                            <td style="padding: 6px 10px;">₹{{ p.price|round|int }}</td>
+                                            <td style="padding: 6px 10px;">{{ p.stock_quantity }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </details>
+                        {% else %}
+                        <span style="color: #a0aec0; font-size: 13px;">No products added yet</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p style="color: #a0aec0;">No retainer profiles found.</p>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <h2>Customer & User Profiles (PII & Saved Payment Info)</h2>
+        {% if users %}
+        <table>
+            <thead>
+                <tr>
+                    <th>User ID</th>
+                    <th>Name & Email</th>
+                    <th>Phone</th>
+                    <th>Delivery Address</th>
+                    <th>Saved Card (Masked)</th>
+                    <th>Role</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in users %}
+                {% set prof = u.profile %}
+                <tr>
+                    <td>#{{ u.id }}</td>
+                    <td>
+                        <strong>{{ prof.full_name if prof and prof.full_name else u.email.split('@')[0].capitalize() }}</strong><br>
+                        <span style="font-size: 12px; color: #718096;">{{ u.email }}</span>
+                    </td>
+                    <td>{{ prof.phone_number if prof else "N/A" }}</td>
+                    <td>
+                        {% if prof %}
+                            <span style="font-size: 12px;">{{ prof.street_address }}, {{ prof.city }}, {{ prof.state }} ({{ prof.postal_code }})</span>
+                        {% else %}
+                            <span style="color: #a0aec0;">No address saved</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if prof and prof.card_last4 %}
+                            <span style="background: #edf2f7; padding: 3px 8px; border-radius: 4px; font-size: 12px; font-family: monospace;">
+                                💳 {{ prof.card_brand }} •••• {{ prof.card_last4 }}
+                            </span>
+                        {% else %}
+                            <span style="color: #a0aec0; font-size: 12px;">No card saved</span>
+                        {% endif %}
+                    </td>
+                    <td><span class="role-badge role-{{ u.role }}">{{ u.role }}</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p style="color: #a0aec0;">No users found.</p>
+        {% endif %}
+    </div>
+</body>
+</html>
